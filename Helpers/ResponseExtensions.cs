@@ -5,6 +5,7 @@ namespace AxoMotor.ApiServer.Helpers;
 
 public static class ResponseExtensions
 {
+    [Obsolete]
     public static GenericResponse<T> ToSuccessResponse<T>(this T result)
     {
         return new()
@@ -14,6 +15,7 @@ public static class ResponseExtensions
         };
     }
 
+    [Obsolete]
     public static GenericResponse<ResultCollection<T>> ToSuccessCollectionResponse<T>(
         this IEnumerable<T> items
     )
@@ -29,6 +31,7 @@ public static class ResponseExtensions
         };
     }
 
+    [Obsolete]
     public static ErrorResponse ToErrorResponse<T>(
         this T exception,
         string? format = null
@@ -45,6 +48,7 @@ public static class ResponseExtensions
         };
     }
 
+    [Obsolete]
     public static ErrorResponse ToErrorResponse<T>(
         this T exception,
         ApiResultCode statusCode,

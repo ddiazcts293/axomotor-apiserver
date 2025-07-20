@@ -1,5 +1,7 @@
+using AxoMotor.ApiServer.ApiModels;
 using AxoMotor.ApiServer.ApiModels.Enums;
 using AxoMotor.ApiServer.Data;
+using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.DTOs.Responses;
 using AxoMotor.ApiServer.Helpers;
@@ -11,17 +13,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AxoMotor.ApiServer.Controllers;
 
-[ApiController]
 [Route("api/vehicles")]
+[ProducesResponseType<BasicResponse>(200)]
+[ProducesResponseType<ErrorResponse>(400)]
+[ProducesResponseType<ErrorResponse>(500)]
 public class VehiclesController
 (
     VehicleService service,
-    AxoMotorContext context) : ControllerBase
+    AxoMotorContext context) : ApiControllerBase
 {
     private readonly VehicleService _vehicleService = service;
     private readonly AxoMotorContext _context = context;
 
     [HttpPost]
+    [ProducesResponseType<GenericResponse<RegisterVehicleResponse>>(200)]
     public async Task<IActionResult> Register(RegisterVehicleRequest request)
     {
         try
@@ -31,11 +36,7 @@ public class VehiclesController
             );
 
             if (!isValidCode)
-            {
-                return Ok(Responses.ErrorResponse(
-                    ApiResultCode.InvalidArgs, "Invalid vehicle class code"
-                ));
-            }
+                return ApiError(ApiResultCode.InvalidArgs, "Invalid vehicle class code");
 
             Vehicle vehicle = new()
             {
@@ -58,19 +59,20 @@ public class VehiclesController
                 Status = vehicle.Status
             };
 
-            return Ok(response.ToSuccessResponse());
+            return ApiSuccess(response);
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
     [HttpGet]
+    [ProducesResponseType<GenericResponse<ResultCollection<VehicleDto>>>(200)]
     public async Task<IActionResult> Get(
         VehicleStatus? status,
         string? brand,
@@ -90,47 +92,46 @@ public class VehiclesController
 
                 if (!isValidCode)
                 {
-                    return Ok(Responses.ErrorResponse(
-                        ApiResultCode.InvalidArgs, "Invalid vehicle class code"
-                    ));
+                    return ApiError(
+                        ApiResultCode.InvalidArgs,
+                        "Invalid vehicle class code");
                 }
             }
 
             var vehicles = await _vehicleService.GetAsync(
             status, brand, model, vehicleClass, year, inUse);
 
-            return Ok(vehicles.ToSuccessCollectionResponse());
+            return ApiSuccess(vehicles.Select(VehicleDto.Convert));
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
     [HttpGet("{vehicleId}")]
+    [ProducesResponseType<GenericResponse<VehicleDto>>(200)]
     public async Task<IActionResult> Get(string vehicleId)
     {
         try
         {
             var vehicle = await _vehicleService.GetAsync(vehicleId);
             if (vehicle is null)
-            {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
-            }
-
-            return Ok(vehicle.ToSuccessResponse());
+                return ApiError(ApiResultCode.NotFound);
+            
+            return ApiSuccess(VehicleDto.Convert(vehicle));
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
@@ -143,19 +144,17 @@ public class VehiclesController
                 vehicleId, request.PlateNumber, request.Status);
 
             if (!result)
-            {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
-            }
-
+                return ApiError(ApiResultCode.NotFound);
+            
             return Ok(Responses.SuccessResponse());
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
@@ -165,19 +164,17 @@ public class VehiclesController
         try
         {
             if (!await _vehicleService.DeleteAsync(vehicleId))
-            {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
-            }
-
+                return ApiError(ApiResultCode.NotFound);
+            
             return Ok(Responses.SuccessResponse());
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
@@ -189,31 +186,30 @@ public class VehiclesController
     }
 
     [HttpGet("{vehicleid}/events")]
+    [ProducesResponseType<GenericResponse<ResultCollection<DeviceEvent>>>(200)]
     public async Task<IActionResult> GetEvents(
         string vehicleid,
+        DateTimeOffset? periodStart,
+        DateTimeOffset? periodEnd,
         int skip = 0,
-        int limit = 20)
+        int limit = 20
+    )
     {
         try
         {
             var result = await _vehicleService.GetEventsAsync(vehicleid, skip, limit);
             if (result is null)
-            {
-                return Ok(Responses.ErrorResponse(
-                    ApiResultCode.Failed,
-                    "Vehicle does not exist"
-                ));
-            }
+                return ApiError(ApiResultCode.Failed, "Vehicle does not exist");
 
-            return Ok(result.ToSuccessCollectionResponse());
+            return ApiSuccess(result);
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 }

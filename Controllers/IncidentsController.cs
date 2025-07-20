@@ -1,8 +1,9 @@
+using AxoMotor.ApiServer.ApiModels;
 using AxoMotor.ApiServer.ApiModels.Enums;
 using AxoMotor.ApiServer.Data;
+using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.DTOs.Responses;
-using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Models.Enums;
 using AxoMotor.ApiServer.Services;
@@ -11,20 +12,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AxoMotor.ApiServer.Controllers;
 
-[ApiController]
 [Route("api/incidents")]
+[ProducesResponseType<BasicResponse>(200)]
+[ProducesResponseType<ErrorResponse>(400)]
+[ProducesResponseType<ErrorResponse>(500)]
 public class IncidentsController
 (
     IncidentService incidentService,
     TripService tripService,
     AxoMotorContext context
-) : ControllerBase
+) : ApiControllerBase
 {
     private readonly IncidentService _incidentService = incidentService;
     private readonly TripService _tripService = tripService;
     private readonly AxoMotorContext _context = context;
 
     [HttpPost]
+    [ProducesResponseType<GenericResponse<CreateIncidentResponse>>(200)]
     public async Task<IActionResult> Create([FromForm] CreateIncidentRequest request)
     {
         try
@@ -34,27 +38,20 @@ public class IncidentsController
                 x => x.Code == request.Code);
             if (info is null)
             {
-                return Ok(Responses.ErrorResponse(
-                    ApiResultCode.InvalidArgs, "Invalid incident code"
-                ));
+                return ApiError(ApiResultCode.InvalidArgs, "Invalid incident code");
             }
 
             // verifica si el viaje existe
             var trip = await _tripService.GetAsync(request.TripId);
             if (trip is null)
             {
-                return Ok(Responses.ErrorResponse(
-                    ApiResultCode.Failed, "The trip does not exist"
-                ));
+                return ApiError(ApiResultCode.NotFound, "The trip does not exist");
             }
 
             // verifica si el viaje fue finalizado
             if (trip.IsFinished)
             {
-                return Ok(Responses.ErrorResponse(
-                    ApiResultCode.Failed,
-                    "Trip was finished"
-                ));
+                return ApiError(ApiResultCode.InvalidState, "Trip was finished");
             }
 
             Incident incident = new()
@@ -87,19 +84,20 @@ public class IncidentsController
                 Type = incident.Type
             };
 
-            return Ok(response.ToSuccessResponse());
+            return ApiSuccess();
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
     [HttpGet]
+    [ProducesResponseType<GenericResponse<ResultCollection<IncidentDto>>>(200)]
     public async Task<IActionResult> Get(
         string? incidentCode,
         IncidentType? type,
@@ -120,9 +118,9 @@ public class IncidentsController
 
                 if (!isValidCode)
                 {
-                    return Ok(Responses.ErrorResponse(
+                    return ApiError(
                         ApiResultCode.InvalidArgs, "Invalid incident code"
-                    ));
+                    );
                 }
             }
 
@@ -137,19 +135,20 @@ public class IncidentsController
                 periodEnd
             );
 
-            return Ok(vehicles.ToSuccessCollectionResponse());
+            return ApiSuccessCollection(vehicles.Select(IncidentDto.Convert));
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
     [HttpGet("{incidentId}")]
+    [ProducesResponseType<GenericResponse<IncidentDto>>(200)]
     public async Task<IActionResult> Get(string incidentId)
     {
         try
@@ -157,18 +156,18 @@ public class IncidentsController
             var incident = await _incidentService.GetAsync(incidentId);
             if (incident is null)
             {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
+                return ApiError(ApiResultCode.NotFound);
             }
 
-            return Ok(incident.ToSuccessResponse());
+            return ApiSuccess(IncidentDto.Convert(incident));
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
@@ -181,16 +180,16 @@ public class IncidentsController
             // verifica si el incidente no existe
             if (incident is null)
             {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
+                return ApiError(ApiResultCode.NotFound);
             }
 
             // verifica si el incidente está cerrado o descartado
             if (incident.IsClosedOrDiscarded)
             {
-                return Ok(Responses.ErrorResponse(
-                    ApiResultCode.Failed,
+                return ApiError(
+                    ApiResultCode.InvalidState,
                     "Incident was closed"
-                ));
+                );
             }
 
             bool result = await _incidentService.UpdateAsync(
@@ -203,18 +202,18 @@ public class IncidentsController
 
             if (!result)
             {
-                return Ok(Responses.ErrorResponse(ApiResultCode.Failed));
+                return ApiError(ApiResultCode.Failed);
             }
 
-            return Ok(Responses.SuccessResponse());
+            return ApiSuccess();
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
@@ -225,18 +224,18 @@ public class IncidentsController
         {
             if (!await _incidentService.DeleteAsync(incidentId))
             {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
+                return ApiError(ApiResultCode.NotFound);
             }
 
-            return Ok(Responses.SuccessResponse());
+            return ApiSuccess();
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 

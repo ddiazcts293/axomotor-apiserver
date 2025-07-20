@@ -1,3 +1,4 @@
+using AxoMotor.ApiServer.ApiModels;
 using AxoMotor.ApiServer.ApiModels.Enums;
 using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Common;
@@ -12,6 +13,9 @@ namespace AxoMotor.ApiServer.Controllers;
 
 [Route("/api/testing")]
 [ApiController]
+[ProducesResponseType<MinimalResponse>(200)]
+[ProducesResponseType<MinimalResponse>(400)]
+[ProducesResponseType<MinimalResponse>(500)]
 public class TestingController
 (
     VehicleService vehicleService,
@@ -35,10 +39,12 @@ public class TestingController
             );
 
             // verifica si el vehículo no existe
-            if (vehicle is null || vehicle.IsOutOfService || eventInfo is null)
-            {
+            if (vehicle is null)
+                return Ok(Responses.MinimalResponse(ApiResultCode.NotFound));
+            else if (eventInfo is null)
                 return Ok(Responses.MinimalResponse(ApiResultCode.InvalidArgs));
-            }
+            else if (vehicle.IsOutOfService)
+                return Ok(Responses.MinimalResponse(ApiResultCode.InvalidState));
 
             DeviceEvent deviceEvent = new()
             {
@@ -50,10 +56,8 @@ public class TestingController
 
             var result = await _vehicleService.PushEventAsync(vehicleId, deviceEvent);
             if (!result)
-            {
                 return Ok(Responses.MinimalResponse(ApiResultCode.Failed));
-            }
-
+            
             return Ok(Responses.MinimalResponse(ApiResultCode.Success));
         }
         catch (FormatException)
@@ -62,36 +66,34 @@ public class TestingController
         }
         catch (Exception)
         {
-            return Ok(Responses.MinimalResponse(ApiResultCode.SystemException));
+            return Ok(Responses.MinimalResponse(ApiResultCode.ServerException));
         }
     }
 
 
     [HttpPost("trip/{tripId}/positions")]
-    public async Task<IActionResult> PostPosition(string tripId, TripPositionDto positionDto)
+    public async Task<IActionResult> PostPosition(string tripId, PostTripPositionRequest request)
     {
         try
         {
             // verifica si el viaje existe
             var trip = await _tripService.GetAsync(tripId);
-            if (trip is null || trip.IsFinished)
-            {
-                return Ok(Responses.MinimalResponse(ApiResultCode.InvalidArgs));
-            }
+            if (trip is null)
+                return Ok(Responses.MinimalResponse(ApiResultCode.NotFound));
+            else if (trip.IsFinished)
+                return Ok(Responses.MinimalResponse(ApiResultCode.InvalidState));
 
             var tripPosition = new TripPosition()
             {
-                Speed = positionDto.Speed,
-                Timestamp = positionDto.Timestamp,
-                Coordinates = new(positionDto.Longitude, positionDto.Latitude)
+                Speed = request.Speed,
+                Timestamp = DateTimeOffset.FromUnixTimeSeconds(request.Timestamp),
+                Coordinates = new(request.Longitude, request.Latitude)
             };
 
             var result = await _tripService.PushPositionAsync(tripId, tripPosition);
             if (!result)
-            {
                 return Ok(Responses.MinimalResponse(ApiResultCode.Failed));
-            }
-
+            
             return Ok(Responses.MinimalResponse(ApiResultCode.Success));
         }
         catch (FormatException)
@@ -100,7 +102,7 @@ public class TestingController
         }
         catch (Exception)
         {
-            return Ok(Responses.MinimalResponse(ApiResultCode.SystemException));
+            return Ok(Responses.MinimalResponse(ApiResultCode.ServerException));
         }
     }
 }

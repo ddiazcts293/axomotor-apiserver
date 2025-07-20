@@ -1,4 +1,6 @@
+using AxoMotor.ApiServer.ApiModels;
 using AxoMotor.ApiServer.ApiModels.Enums;
+using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.DTOs.Responses;
 using AxoMotor.ApiServer.Helpers;
@@ -9,9 +11,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AxoMotor.ApiServer.Controllers;
 
-[ApiController]
 [Route("api/userAccounts")]
-public class UserAccountsController(UserAccountService service) : ControllerBase
+[ProducesResponseType<BasicResponse>(200)]
+[ProducesResponseType<ErrorResponse>(400)]
+[ProducesResponseType<ErrorResponse>(500)]
+public class UserAccountsController(UserAccountService service) : ApiControllerBase
 {
     /*
         TODO: agregar autenticación
@@ -22,7 +26,16 @@ public class UserAccountsController(UserAccountService service) : ControllerBase
 
     private readonly UserAccountService _userAccountService = service;
 
+    [HttpGet("me")]
+    [ProducesResponseType<GenericResponse<UserAccountDto>>(200)]
+    public async Task<IActionResult> GetMe()
+    {
+        // TODO: agregar endpoint para obtener información del mismo usuario
+        return Ok(Responses.ErrorResponse(ApiResultCode.NotImplemented));
+    }
+
     [HttpPost]
+    [ProducesResponseType<RegisterUserAccountResponse>(200)]
     public async Task<IActionResult> Register(RegisterUserAccountRequest request)
     {
         try
@@ -42,19 +55,20 @@ public class UserAccountsController(UserAccountService service) : ControllerBase
                 Status = account.Status
             };
 
-            return Ok(response.ToSuccessResponse());
+            return ApiSuccess(response);
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
-        }        
+            return ApiServerError(ex);
+        }
     }
 
     [HttpGet]
+    [ProducesResponseType<GenericResponse<ResultCollection<UserAccountDto>>>(200)]
     public async Task<IActionResult> Get(
         UserAccountType? type,
         UserAccountStatus? status,
@@ -66,38 +80,37 @@ public class UserAccountsController(UserAccountService service) : ControllerBase
             var userAccounts = await _userAccountService.GetAsync(
                 type, status, isLoggedIn);
 
-            return Ok(userAccounts.ToSuccessCollectionResponse());
+            return ApiSuccess(userAccounts.Select(UserAccountDto.Convert));
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType<GenericResponse<UserAccountDto>>(200)]
     public async Task<IActionResult> Get(string id)
-    {        
+    {
         try
         {
             var userAccount = await _userAccountService.GetAsync(id);
             if (userAccount is null)
-            {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
-            }
+                return ApiError(ApiResultCode.NotFound);
 
-            return Ok(userAccount.ToSuccessResponse());
+            return ApiSuccess(UserAccountDto.Convert(userAccount));
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
@@ -110,19 +123,17 @@ public class UserAccountsController(UserAccountService service) : ControllerBase
                 id, request.FirstName, request.LastName, request.Status);
 
             if (!result)
-            {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
-            }
+                return ApiError(ApiResultCode.NotFound);
 
-            return Ok(Responses.SuccessResponse());
+            return ApiSuccess();
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 
@@ -139,19 +150,17 @@ public class UserAccountsController(UserAccountService service) : ControllerBase
         try
         {
             if (!await _userAccountService.DeleteAsync(id))
-            {
-                return Ok(Responses.ErrorResponse(ApiResultCode.NotFound));
-            }
+                return ApiError(ApiResultCode.NotFound);
 
-            return Ok(Responses.SuccessResponse());
+            return ApiSuccess();
         }
         catch (FormatException ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.InvalidArgs));
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {
-            return Ok(ex.ToErrorResponse(ApiResultCode.SystemException));
+            return ApiServerError(ex);
         }
     }
 }
