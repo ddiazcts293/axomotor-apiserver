@@ -86,7 +86,7 @@ public class AxoMotorContext(DbContextOptions options) : DbContext(options)
             entity.Property(x => x.FirstName).HasMaxLength(40);
             entity.Property(x => x.LastName).HasMaxLength(40);
             entity.Property(x => x.Email).HasMaxLength(40);
-            entity.Property(x => x.PhoneNumber).HasMaxLength(12);
+            entity.Property(x => x.PhoneNumber).HasMaxLength(16);
             entity.Property(x => x.Role).HasConversion<string>();
             entity.Property(x => x.Status).HasConversion<string>();
             entity.Property(x => x.RegistrationDate)

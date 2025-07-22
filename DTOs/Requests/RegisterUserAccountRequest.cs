@@ -1,22 +1,27 @@
 using System.ComponentModel.DataAnnotations;
+using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.Models.Enums;
 
 namespace AxoMotor.ApiServer.DTOs.Requests;
 
 public class RegisterUserAccountRequest
 {
-    [Length(3, 40)]
+    [Required(AllowEmptyStrings = false)]
+    [MaxLength(Constants.MaxUserNameLength)]
     public required string FirstName { get; set; }
 
-    [Length(3, 40)]
+    [Required(AllowEmptyStrings = false)]
+    [MaxLength(Constants.MaxUserNameLength)]
     public required string LastName { get; set; }
 
-    [MaxLength(40)]
-    [DataType(DataType.EmailAddress)]
+    [EmailAddress]
+    [Required(AllowEmptyStrings = false)]
+    [MaxLength(Constants.MaxUserEmailLength)]
     public required string Email { get; set; }
 
-    [MaxLength(12)]
-    [DataType(DataType.PhoneNumber)]
+    [Phone]
+    [Required(AllowEmptyStrings = false)]
+    [MaxLength(Constants.MaxUserPhoneNumberLength)]
     public required string PhoneNumber { get; set; }
 
     public required UserAccountRole Role { get; set; }

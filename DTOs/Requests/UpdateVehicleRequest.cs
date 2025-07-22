@@ -1,14 +1,15 @@
 using System.ComponentModel.DataAnnotations;
+using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.Models.Enums;
 
 namespace AxoMotor.ApiServer.DTOs.Requests;
 
 public class UpdateVehicleRequest
 {
-    [Length(8, 10)]
+    [Length(Constants.MinVehiclePlateNumberLength, Constants.MaxVehiclePlateNumberLength)]
     public string? PlateNumber { get; set; }
 
-    [Length(16, 22)]
+    [MaxLength(Constants.MaxVehicleRegNumberLength)]
     public string? RegistrationNumber { get; set; }
 
     public VehicleStatus? Status { get; set; }

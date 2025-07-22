@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Common;
 
 namespace AxoMotor.ApiServer.DTOs.Requests;
@@ -27,5 +29,6 @@ public class CreateTripRequest
     /// <summary>
     /// Lista de paradas planeadas durante el viaje.
     /// </summary>
+    [Range(0, Constants.MaxTripPlannedStopCount)]
     public IList<TripLocationDto>? PlannedStops { get; set; }
 }

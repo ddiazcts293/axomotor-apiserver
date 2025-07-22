@@ -1,13 +1,20 @@
+using System.ComponentModel.DataAnnotations;
+using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.Models;
 
 namespace AxoMotor.ApiServer.DTOs.Common;
 
 public class TripLocationDto : PositionDtoBase
 {
+    [MaxLength(Constants.MaxKnownLocationNameLength)]
+    [Required(AllowEmptyStrings = false)]
     public required string Name { get; set; }
 
+    [MaxLength(Constants.MaxKnownLocationAddressLength)]
+    [Required(AllowEmptyStrings = false)]
     public required string Address { get; set; }
 
+    [Range(0, Constants.MaxRatioValue)]
     public required float Ratio { get; set; }
 
     public required DateTimeOffset DateTime { get; set; }

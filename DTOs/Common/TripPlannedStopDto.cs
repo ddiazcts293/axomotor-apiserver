@@ -1,11 +1,14 @@
+using System.ComponentModel.DataAnnotations;
 using AxoMotor.ApiServer.Models;
 
 namespace AxoMotor.ApiServer.DTOs.Common;
 
 public class TripPlannedStopDto : TripLocationDto
 {
+    [DataType(DataType.Duration)]
     public TimeSpan? EstimatedDuration { get; set; }
 
+    [DataType(DataType.Duration)]
     public TimeSpan? ActualDuration { get; set; }
 
     public bool? IsCompleted { get; set; }
