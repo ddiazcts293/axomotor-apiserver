@@ -1,13 +1,11 @@
 using AxoMotor.ApiServer.ApiModels;
 using AxoMotor.ApiServer.ApiModels.Enums;
 using AxoMotor.ApiServer.Data;
-using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AxoMotor.ApiServer.Controllers;
 
@@ -18,25 +16,26 @@ namespace AxoMotor.ApiServer.Controllers;
 [ProducesResponseType<MinimalResponse>(500)]
 public class TestingController
 (
-    VehicleService vehicleService,
     TripService tripService,
-    AxoMotorContext context) : ControllerBase
+    PositionService positionService,
+    DeviceEventService deviceEventService,
+    AxoMotorContext context
+) : ControllerBase
 {
-    private readonly VehicleService _vehicleService = vehicleService;
     private readonly TripService _tripService = tripService;
+    private readonly PositionService _positionService = positionService;
+    private readonly DeviceEventService _deviceEventService = deviceEventService;
     private readonly AxoMotorContext _context = context;
 
     [HttpPost("device/{vehicleId}/event")]
-    public async Task<IActionResult> PostDeviceEvent(string vehicleId, PostDeviceEventRequest request)
+    public async Task<IActionResult> PostDeviceEvent(int vehicleId, PostDeviceEventRequest request)
     {
         try
         {
             // obtiene el vehículo
-            var vehicle = await _vehicleService.GetAsync(vehicleId);
+            var vehicle = await _context.Vehicles.FindAsync(vehicleId);
             // verifica si el código es de un evento de dispositivo válido
-            var eventInfo = await _context.DeviceEventCatalog.SingleOrDefaultAsync(
-                x => x.Code == request.Code
-            );
+            var eventInfo = await _context.DeviceEventCatalog.FindAsync(request.Code);
 
             // verifica si el vehículo no existe
             if (vehicle is null)
@@ -48,16 +47,14 @@ public class TestingController
 
             DeviceEvent deviceEvent = new()
             {
+                VehicleId = vehicleId,
                 Code = request.Code,
                 Severity = eventInfo.Severity,
                 Type = eventInfo.Type,
                 Timestamp = DateTimeOffset.FromUnixTimeSeconds(request.Timestamp)
             };
 
-            var result = await _vehicleService.PushEventAsync(vehicleId, deviceEvent);
-            if (!result)
-                return Ok(Responses.MinimalResponse(ApiResultCode.Failed));
-            
+            await _deviceEventService.PushOneAsync(deviceEvent);
             return Ok(Responses.MinimalResponse(ApiResultCode.Success));
         }
         catch (FormatException)
@@ -70,14 +67,13 @@ public class TestingController
         }
     }
 
-
     [HttpPost("trip/{tripId}/positions")]
     public async Task<IActionResult> PostPosition(string tripId, PostTripPositionRequest request)
     {
         try
         {
             // verifica si el viaje existe
-            var trip = await _tripService.GetAsync(tripId);
+            var trip = await _tripService.GetAsync(tripId.ToString());
             if (trip is null)
                 return Ok(Responses.MinimalResponse(ApiResultCode.NotFound));
             else if (trip.IsFinished)
@@ -85,15 +81,13 @@ public class TestingController
 
             var tripPosition = new TripPosition()
             {
+                TripId = tripId,
                 Speed = request.Speed,
                 Timestamp = DateTimeOffset.FromUnixTimeSeconds(request.Timestamp),
                 Coordinates = new(request.Longitude, request.Latitude)
             };
 
-            var result = await _tripService.PushPositionAsync(tripId, tripPosition);
-            if (!result)
-                return Ok(Responses.MinimalResponse(ApiResultCode.Failed));
-            
+            await _positionService.PushOneAsync(tripPosition);
             return Ok(Responses.MinimalResponse(ApiResultCode.Success));
         }
         catch (FormatException)

@@ -1,8 +1,8 @@
 namespace AxoMotor.ApiServer.Models.Enums;
 
-public enum UserAccountType
+public enum UserAccountRole
 {
-    Administrator,
+    Admin,
     Agent,
     Driver,
 }

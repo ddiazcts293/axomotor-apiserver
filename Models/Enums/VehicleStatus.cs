@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace AxoMotor.ApiServer.Models.Enums;
 
 public enum VehicleStatus

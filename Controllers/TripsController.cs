@@ -20,13 +20,12 @@ namespace AxoMotor.ApiServer.Controllers;
 public class TripsController
 (
     TripService tripService,
-    UserAccountService userAccountService,
-    VehicleService vehicleService,
-    AxoMotorContext context) : ApiControllerBase
+    PositionService positionService,
+    AxoMotorContext context
+) : ApiControllerBase
 {
     private readonly TripService _tripService = tripService;
-    private readonly VehicleService _vehicleService = vehicleService;
-    private readonly UserAccountService _userAccountService = userAccountService;
+    private readonly PositionService _positionService = positionService;
     private readonly AxoMotorContext _context = context;
 
     [HttpPost]
@@ -35,19 +34,26 @@ public class TripsController
     {
         try
         {
+            // inicia una transacción
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync();
+
             // obtiene la cuenta asociada al identificador de conductor especificado
-            var account = await _userAccountService.GetAsync(request.DriverId);
+            var account = await _context.UserAccounts.FindAsync(request.DriverId);
             // obtiene la cuenta asociada al identificador de vehículo especificado
-            var vehicle = await _vehicleService.GetAsync(request.VehicleId);
+            var vehicle = await _context.Vehicles.FindAsync(request.VehicleId);
+
+            // confirma la transacción
+            await transaction.CommitAsync();
 
             if (account is null)
-                return ApiError(ApiResultCode.NotFound, "Driver not found");
-            if (account.Type != UserAccountType.Driver)
+                return ApiError(ApiResultCode.NotFound, "Driver was not found");
+            if (account.Role != UserAccountRole.Driver)
                 return ApiError(ApiResultCode.InvalidState, "User is not a driver");
             if (account.Status != UserAccountStatus.Enabled)
-                return ApiError(ApiResultCode.InvalidState, "User account disabled");
+                return ApiError(ApiResultCode.InvalidState, "User account is disabled");
             if (vehicle is null)
-                return ApiError(ApiResultCode.NotFound, "Vehicle not found");
+                return ApiError(ApiResultCode.NotFound, "Vehicle was not found");
             if (vehicle.Status is VehicleStatus.HeldByAuthorities)
                 return ApiError(ApiResultCode.InvalidState, "Vehicle is held by authorities");
             if (vehicle.Status is VehicleStatus.OutOfService)
@@ -58,54 +64,18 @@ public class TripsController
 
             Trip trip = new()
             {
-                Vehicle = request.VehicleId,
-                Driver = request.DriverId,
-                StartingPoint = new()
-                {
-                    Name = request.StartingPoint.Name,
-                    Address = request.StartingPoint.Address,
-                    DateTime = request.StartingPoint.DateTime,
-                    Ratio = request.StartingPoint.Ratio,
-                    Coordinates = new
-                    (
-                        request.StartingPoint.Longitude,
-                        request.StartingPoint.Latitude
-                    )
-                },
-                FinalDestination = new()
-                {
-                    Name = request.FinalDestination.Name,
-                    Address = request.FinalDestination.Address,
-                    DateTime = request.FinalDestination.DateTime,
-                    Ratio = request.FinalDestination.Ratio,
-                    Coordinates = new
-                    (
-                        request.FinalDestination.Longitude,
-                        request.FinalDestination.Latitude
-                    )
-                },
-                CreatedBy = request.DriverId
+                VehicleId = request.VehicleId,
+                DriverId = request.DriverId,
+                Origin = request.Origin!,
+                Destination = request.Destination!,
+                CreatedById = request.DriverId, // TODO: obtener Id de quien realiza la acción
+                PlannedStops = request.PlannedStops?
+                    .Select(x => (TripPlannedStop)x!)
+                    .ToList(),
             };
 
-            if (request.PlannedStops is not null)
-            {
-                List<TripLocation> plannedStops = [];
-                foreach (var item in request.PlannedStops)
-                {
-                    plannedStops.Add(new()
-                    {
-                        Name = item.Name,
-                        Address = item.Address,
-                        DateTime = item.DateTime,
-                        Ratio = item.Ratio,
-                        Coordinates = new(item.Longitude, item.Latitude)
-                    });
-                }
-
-                trip.PlannedStops = plannedStops;
-            }
-
             await _tripService.CreateAsync(trip);
+
             var response = new CreateTripResponse()
             {
                 TripId = trip.Id,
@@ -127,27 +97,48 @@ public class TripsController
     [HttpGet]
     [ProducesResponseType<GenericResponse<ResultCollection<TripDto>>>(200)]
     public async Task<IActionResult> Get(
-        string? driverId,
-        string? vehicleId,
-        string? agentId,
-        string? startingPointName,
-        string? finalDestinationName,
-        TripStatus? status,
-        DateTimeOffset? periodStart,
-        DateTimeOffset? periodEnd)
+        int? driverId,
+        int? vehicleId,
+        int? cratedById,
+        int? updateById,
+        string? originName,
+        string? destinationName,
+        TripStatus? status)
     {
         try
         {
-            var result = await _tripService.GetAsync(
+            // obtiene la lista de usuarios en mysql
+            var vehicles = await _context.Vehicles.ToListAsync();
+            // obtiene la lista de usuarios en mysql
+            var users = await _context.UserAccounts.ToListAsync();
+            // obtiene la lista de viajes en mongodb
+            var trips = await _tripService.GetAsync(
                 driverId,
                 vehicleId,
-                agentId,
-                startingPointName,
-                finalDestinationName,
+                cratedById,
+                updateById,
+                originName,
+                destinationName,
                 status
             );
 
-            return ApiSuccessCollection(result.Select(TripDto.Convert));
+            var results = trips.Select(x => new TripDto
+            {
+                TripId = x.Id,
+                Number = x.Number,
+                Status = x.Status,
+                Origin = x.Origin!,
+                Destination = x.Destination!,
+                CreationDate = x.CreationDate,
+                LastUpdateDate = x.LastUpdateDate,
+                Stats = x.Stats,
+                Vehicle = vehicles.SingleOrDefault(v => v.Id == x.VehicleId),
+                Driver = users.SingleOrDefault(u => u.Id == x.DriverId),
+                CreatedBy = users.SingleOrDefault(u => u.Id == x.CreatedById),
+                UpdatedBy = users.SingleOrDefault(u => u.Id == x.UpdatedById),
+            });
+
+            return ApiSuccessCollection(results);
         }
         catch (FormatException ex)
         {
@@ -165,11 +156,34 @@ public class TripsController
     {
         try
         {
-            var result = await _tripService.GetAsync(tripId);
-            if (result is null)
+            // obtiene la lista de usuarios en mysql
+            var users = await _context.UserAccounts.ToListAsync();
+            // obtiene el viaje asociado
+            var trip = await _tripService.GetAsync(tripId);
+            if (trip is null)
                 return ApiError(ApiResultCode.NotFound);
 
-            return ApiSuccess(TripDto.Convert(result));
+            var result = new TripDto
+            {
+                TripId = trip.Id,
+                Number = trip.Number,
+                Status = trip.Status,
+                Origin = trip.Origin!,
+                Destination = trip.Destination!,
+                CreationDate = trip.CreationDate,
+                LastUpdateDate = trip.LastUpdateDate,
+                Stats = trip.Stats,
+                Driver = users.SingleOrDefault(u => u.Id == trip.DriverId),
+                CreatedBy = users.SingleOrDefault(u => u.Id == trip.CreatedById),
+                UpdatedBy = users.SingleOrDefault(u => u.Id == trip.UpdatedById),
+                Vehicle = await _context.Vehicles
+                    .SingleOrDefaultAsync(v => v.Id == trip.VehicleId),
+                PlannedStops = trip.PlannedStops?
+                    .Select(p => (TripPlannedStopDto)p!)
+                    .ToList() ?? []
+            };
+
+            return ApiSuccess(result);
         }
         catch (FormatException ex)
         {
@@ -194,18 +208,18 @@ public class TripsController
             var trip = await _tripService.GetAsync(tripId);
             if (trip is null)
                 return ApiError(ApiResultCode.NotFound, "Trip not found");
-            
+
             // verifica si el viaje está finalizado
             if (trip.IsFinished)
                 return ApiError(ApiResultCode.InvalidState, "Trip was finished");
-            
+
             if (request.DriverId is not null)
             {
                 // obtiene la cuenta asociada al identificador de conductor especificado
-                var account = await _userAccountService.GetAsync(request.DriverId);
+                var account = await _context.UserAccounts.FindAsync(request.DriverId);
                 if (account is null)
                     return ApiError(ApiResultCode.NotFound, "Driver not found");
-                if (account.Type != UserAccountType.Driver)
+                if (account.Role != UserAccountRole.Driver)
                     return ApiError(ApiResultCode.InvalidState, "User is not a driver");
                 if (account.Status != UserAccountStatus.Enabled)
                     return ApiError(ApiResultCode.InvalidState, "User account disabled");
@@ -217,7 +231,7 @@ public class TripsController
             if (request.VehicleId is not null)
             {
                 // obtiene la cuenta asociada al identificador de vehículo especificado
-                var vehicle = await _vehicleService.GetAsync(request.VehicleId);
+                var vehicle = await _context.Vehicles.FindAsync(request.VehicleId);
                 if (vehicle is null)
                     return ApiError(ApiResultCode.NotFound, "Vehicle not found");
                 if (vehicle.IsOutOfService)
@@ -226,55 +240,9 @@ public class TripsController
                 // TODO: verificar si el vehiculo están asignado a otro viaje
             }
 
-            List<TripLocation>? plannedStops = null;
-            if (request.PlannedStops is not null)
-            {
-                plannedStops = [];
-
-                foreach (var item in request.PlannedStops)
-                {
-                    plannedStops.Add(new()
-                    {
-                        Name = item.Name,
-                        Address = item.Address,
-                        DateTime = item.DateTime,
-                        Ratio = item.Ratio,
-                        Coordinates = new(item.Longitude, item.Latitude)
-                    });
-                }
-            }
-
-            TripLocation? startingPoint = null;
-            if (request.StartingPoint is not null)
-            {
-                startingPoint = new()
-                {
-                    Coordinates = new(
-                        request.StartingPoint.Longitude,
-                        request.StartingPoint.Latitude
-                    ),
-                    Ratio = request.StartingPoint.Ratio,
-                    Name = request.StartingPoint.Name,
-                    Address = request.StartingPoint.Address,
-                    DateTime = request.StartingPoint.DateTime
-                };
-            }
-
-            TripLocation? finalDestination = null;
-            if (request.FinalDestination is not null)
-            {
-                finalDestination = new()
-                {
-                    Coordinates = new(
-                        request.FinalDestination.Longitude,
-                        request.FinalDestination.Latitude
-                    ),
-                    Ratio = request.FinalDestination.Ratio,
-                    Name = request.FinalDestination.Name,
-                    Address = request.FinalDestination.Address,
-                    DateTime = request.FinalDestination.DateTime
-                };
-            }
+            List<TripPlannedStop>? plannedStops = request.PlannedStops?
+                .Select(x => (TripPlannedStop)x!)
+                .ToList();
 
             // actualiza la información del viaje
             bool result = await _tripService.UpdateAsync(
@@ -282,14 +250,15 @@ public class TripsController
                 request.DriverId,
                 request.VehicleId,
                 request.Status,
-                startingPoint,
-                finalDestination,
+                request.Origin,
+                request.Destination,
                 plannedStops
+            // TODO: obtener Id de quien realiza la acción
             );
 
             if (!result)
                 return ApiError(ApiResultCode.Failed);
-            
+
             return ApiSuccess();
         }
         catch (FormatException ex)
@@ -323,30 +292,28 @@ public class TripsController
     }
 
     [HttpPost("{tripId}/positions")]
-    public async Task<IActionResult> PostPosition(string tripId, TripPositionDto positionDto)
+    public async Task<IActionResult> PostPosition(string tripId, TripPositionDto position)
     {
         try
         {
             // verifica si el viaje existe
-            var trip = await _tripService.GetAsync(tripId);
+            var trip = await _tripService.GetAsync(tripId.ToString());
             if (trip is null)
                 return ApiError(ApiResultCode.NotFound, "Trip does not exist");
             
             // verifica si el viaje está finalizado
             if (trip.IsFinished)
                 return ApiError(ApiResultCode.Failed, "Trip was finished");
-           
+
             var tripPosition = new TripPosition()
             {
-                Speed = positionDto.Speed,
-                Timestamp = positionDto.Timestamp,
-                Coordinates = new(positionDto.Longitude, positionDto.Latitude)
+                TripId = tripId,
+                Speed = position.Speed,
+                Timestamp = position.Timestamp,
+                Coordinates = new(position.Longitude, position.Latitude)
             };
 
-            var result = await _tripService.PushPositionAsync(tripId, tripPosition);
-            if (!result)
-                return ApiError(ApiResultCode.Failed);
-            
+            await _positionService.PushOneAsync(tripPosition);
             return ApiSuccess();
         }
         catch (FormatException ex)
@@ -371,11 +338,11 @@ public class TripsController
     {
         try
         {
-            var list = await _tripService.GetPositionsAsync(tripId, skip, limit);
+            var list = await _positionService.GetAsync(tripId, skip, limit);
             if (list is null)
                 return ApiError(ApiResultCode.NotFound, "Trip does not exist");
 
-            return ApiSuccessCollection(list.Select(TripPositionDto.Convert));
+            return ApiSuccessCollection(list.Select(x => (TripPositionDto)x!));
         }
         catch (FormatException ex)
         {

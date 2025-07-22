@@ -12,19 +12,34 @@ public class TripLocationDto : PositionDtoBase
 
     public required DateTimeOffset DateTime { get; set; }
 
-    public TimeSpan? Duration { get; set; }
-
-    public static TripLocationDto Convert(TripLocation location)
-    {
-        return new()
+    public static implicit operator TripLocationDto?(TripLocation? location)
+        => location is null ? null : new()
         {
             Name = location.Name,
-            Address = location.Name,
+            Address = location.Address,
             Latitude = location.Coordinates.Latitude,
             Longitude = location.Coordinates.Longitude,
-            Ratio = location.Ratio,
             DateTime = location.DateTime,
-            Duration = location.Duration
+            Ratio = location.Ratio
         };
-    }
+ 
+    public static implicit operator TripLocation?(TripLocationDto? dto)
+        => dto is null ? null : new()
+    {
+        Name = dto.Name,
+        Address = dto.Address,
+        Ratio = dto.Ratio,
+        Coordinates = new(dto.Longitude, dto.Latitude),
+        DateTime = dto.DateTime
+    };
+
+    public static explicit operator TripPlannedStop?(TripLocationDto? dto)
+        => dto is null ? null : new()
+    {
+        Name = dto.Name,
+        Address = dto.Address,
+        Ratio = dto.Ratio,
+        Coordinates = new(dto.Longitude, dto.Latitude),
+        DateTime = dto.DateTime
+    };
 }

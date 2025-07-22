@@ -1,8 +1,7 @@
+using System.Text.Json.Serialization;
 using AxoMotor.ApiServer.Models.Enums;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 
-namespace AxoMotor.ApiServer.Models;
+namespace AxoMotor.ApiServer.Models.Catalog;
 
 /// <summary>
 /// Representa un vehículo registrado.
@@ -12,9 +11,7 @@ public class Vehicle
     /// <summary>
     /// Identificador del vehículo.
     /// </summary>
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string Id { get; set; } = null!;
+    public int Id { get; set; }
 
     /// <summary>
     /// Matrícula o código en las placas.
@@ -32,34 +29,50 @@ public class Vehicle
     public VehicleStatus Status { get; set; }
 
     /// <summary>
-    /// Determina si el vehículo está en uso en el momento.
+    /// Determina si el vehículo está en uso en el momento actual.
     /// </summary>
     public bool InUse { get; set; }
 
     /// <summary>
-    /// Información detallada del vehículo.
+    /// Marca del vehículo.
     /// </summary>
-    public required VehicleDetails Details { get; set; }
+    public required string Brand { get; set; }
 
     /// <summary>
-    /// Lista de eventos del dispositivo.
+    /// Modelo del vehículo.
     /// </summary>
-    public IList<DeviceEvent> DeviceEvents { get; init; } = [];
+    public required string Model { get; set; }
+
+    /// <summary>
+    /// Clase del vehículo.
+    /// </summary>
+    public required string Class { get; set; }
+
+    /// <summary>
+    /// Año del vehículo.
+    /// </summary>
+    public int Year { get; set; }
 
     /// <summary>
     /// Fecha de registro del vehículo.
     /// </summary>
-    [BsonRepresentation(BsonType.DateTime)]
     public DateTimeOffset RegistrationDate { get; set; }
 
     /// <summary>
     /// Fecha de última actualización de la información del vehículo.
     /// </summary>
-    [BsonIgnoreIfNull]
-    [BsonRepresentation(BsonType.DateTime)]
     public DateTimeOffset? LastUpdateDate { get; set; }
 
-    [BsonIgnore]
-    public bool IsOutOfService => Status is not
-        VehicleStatus.Operative;
+    #region JSON ignore
+
+    /// <summary>
+    /// Determina si el vehículo está fuera de servicio.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsOutOfService => Status is not VehicleStatus.Operative;
+
+    [JsonIgnore]
+    public string Details => $"{Brand} {Model} {Year}";
+
+    #endregion
 }

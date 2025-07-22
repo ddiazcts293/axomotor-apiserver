@@ -31,10 +31,10 @@ builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection("Mo
 ConfigureMySQL(builder.Services, builder.Configuration.GetSection("MySQL"));
 
 // Agrega los servicios para manejar colecciones en MongoDB
-builder.Services.AddSingleton<UserAccountService>();
 builder.Services.AddSingleton<TripService>();
-builder.Services.AddSingleton<VehicleService>();
 builder.Services.AddSingleton<IncidentService>();
+builder.Services.AddSingleton<PositionService>();
+builder.Services.AddSingleton<DeviceEventService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

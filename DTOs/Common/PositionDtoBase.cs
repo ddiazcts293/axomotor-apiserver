@@ -14,5 +14,4 @@ public abstract class PositionDtoBase
     /// Longitud.
     /// </summary>
     public required double Longitude { get; set; }
-
 }

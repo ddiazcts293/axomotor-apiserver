@@ -1,7 +1,7 @@
 namespace AxoMotor.ApiServer.Models.Enums;
 
 /// <summary>
-/// Tipo de incidente.
+/// Tipo de incidencia.
 /// </summary>
 public enum IncidentType
 {

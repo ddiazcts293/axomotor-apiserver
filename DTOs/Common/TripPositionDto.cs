@@ -17,14 +17,12 @@ public class TripPositionDto : PositionDtoBase
     /// </summary>
     public DateTimeOffset Timestamp { get; set; }
 
-    public static TripPositionDto Convert(TripPosition position)
+    public static implicit operator TripPositionDto?(TripPosition? position)
+        => position is null ? null : new()
     {
-        return new()
-        {
-            Latitude = position.Coordinates.Latitude,
-            Longitude = position.Coordinates.Longitude,
-            Speed = position.Speed,
-            Timestamp = position.Timestamp
-        };
-    }
+        Latitude = position.Coordinates.Latitude,
+        Longitude = position.Coordinates.Longitude,
+        Speed = position.Speed,
+        Timestamp = position.Timestamp
+    };
 }

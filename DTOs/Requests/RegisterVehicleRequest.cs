@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using AxoMotor.ApiServer.Models.Enums;
 
 namespace AxoMotor.ApiServer.DTOs.Requests;
 
@@ -11,10 +10,10 @@ public class RegisterVehicleRequest
     [Length(16, 22)]
     public required string RegistrationNumber { get; set; }
 
-    [MinLength(3)]
+    [Length(3, 20)]
     public required string Brand { get; set; }
 
-    [MinLength(3)]
+    [Length(3, 20)]
     public required string Model { get; set; }
 
     [Length(1, 20)]

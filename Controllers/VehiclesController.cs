@@ -4,8 +4,8 @@ using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.DTOs.Responses;
-using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models;
+using AxoMotor.ApiServer.Models.Catalog;
 using AxoMotor.ApiServer.Models.Enums;
 using AxoMotor.ApiServer.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -17,13 +17,13 @@ namespace AxoMotor.ApiServer.Controllers;
 [ProducesResponseType<BasicResponse>(200)]
 [ProducesResponseType<ErrorResponse>(400)]
 [ProducesResponseType<ErrorResponse>(500)]
-public class VehiclesController
-(
-    VehicleService service,
-    AxoMotorContext context) : ApiControllerBase
+public class VehiclesController(
+    AxoMotorContext context,
+    DeviceEventService deviceEventService
+) : ApiControllerBase
 {
-    private readonly VehicleService _vehicleService = service;
     private readonly AxoMotorContext _context = context;
+    private readonly DeviceEventService _deviceEventService = deviceEventService;
 
     [HttpPost]
     [ProducesResponseType<GenericResponse<RegisterVehicleResponse>>(200)]
@@ -31,27 +31,22 @@ public class VehiclesController
     {
         try
         {
-            bool isValidCode = await _context.VehicleClasses.AnyAsync(
-                x => x.Code == request.Class
-            );
-
-            if (!isValidCode)
+            var @class = await _context.VehicleClasses.FindAsync(request.Class);
+            if (@class is null)
                 return ApiError(ApiResultCode.InvalidArgs, "Invalid vehicle class code");
 
             Vehicle vehicle = new()
             {
                 PlateNumber = request.PlateNumber,
                 RegistrationNumber = request.RegistrationNumber,
-                Details = new()
-                {
-                    Brand = request.Brand,
-                    Model = request.Model,
-                    Class = request.Class,
-                    Year = request.Year
-                }
+                Brand = request.Brand,
+                Model = request.Model,
+                Class = @class,
+                Year = request.Year
             };
 
-            await _vehicleService.RegisterAsync(vehicle);
+            await _context.Vehicles.AddAsync(vehicle);
+            await _context.SaveChangesAsync();
 
             RegisterVehicleResponse response = new()
             {
@@ -72,7 +67,7 @@ public class VehiclesController
     }
 
     [HttpGet]
-    [ProducesResponseType<GenericResponse<ResultCollection<VehicleDto>>>(200)]
+    [ProducesResponseType<GenericResponse<ResultCollection<Vehicle>>>(200)]
     public async Task<IActionResult> Get(
         VehicleStatus? status,
         string? brand,
@@ -98,10 +93,23 @@ public class VehiclesController
                 }
             }
 
-            var vehicles = await _vehicleService.GetAsync(
-            status, brand, model, vehicleClass, year, inUse);
+            var query = _context.Vehicles.AsQueryable();
 
-            return ApiSuccess(vehicles.Select(VehicleDto.Convert));
+            if (status is not null)
+                query = query.Where(x => x.Status == status);
+            if (brand is not null)
+                query = query.Where(x => x.Brand == brand);
+            if (model is not null)
+                query = query.Where(x => x.Model == model);
+            if (vehicleClass is not null)
+                query = query.Where(x => x.Class == vehicleClass);
+            if (year is not null)
+                query = query.Where(x => x.Year == year);
+            if (inUse is not null)
+                query = query.Where(x => x.InUse == inUse);
+
+            var vehicles = await query.ToListAsync();
+            return ApiSuccess(vehicles);
         }
         catch (FormatException ex)
         {
@@ -114,16 +122,16 @@ public class VehiclesController
     }
 
     [HttpGet("{vehicleId}")]
-    [ProducesResponseType<GenericResponse<VehicleDto>>(200)]
-    public async Task<IActionResult> Get(string vehicleId)
+    [ProducesResponseType<GenericResponse<Vehicle>>(200)]
+    public async Task<IActionResult> Get(int vehicleId)
     {
         try
         {
-            var vehicle = await _vehicleService.GetAsync(vehicleId);
+            var vehicle = await _context.Vehicles.FindAsync(vehicleId);
             if (vehicle is null)
                 return ApiError(ApiResultCode.NotFound);
             
-            return ApiSuccess(VehicleDto.Convert(vehicle));
+            return ApiSuccess(vehicle);
         }
         catch (FormatException ex)
         {
@@ -136,17 +144,24 @@ public class VehiclesController
     }
 
     [HttpPut("{vehicleId}")]
-    public async Task<IActionResult> Update(string vehicleId, UpdateVehicleRequest request)
+    public async Task<IActionResult> Update(int vehicleId, UpdateVehicleRequest request)
     {
         try
         {
-            bool result = await _vehicleService.UpdateAsync(
-                vehicleId, request.PlateNumber, request.Status);
-
-            if (!result)
+            var vehicle = await _context.Vehicles.FindAsync(vehicleId);
+            if (vehicle is null)
                 return ApiError(ApiResultCode.NotFound);
-            
-            return Ok(Responses.SuccessResponse());
+
+            if (request.PlateNumber is not null)
+                vehicle.PlateNumber = request.PlateNumber;
+            if (request.RegistrationNumber is not null)
+                vehicle.RegistrationNumber = request.RegistrationNumber;
+            if (request.Status is not null)
+                vehicle.Status = request.Status.Value;
+
+            _context.Vehicles.Update(vehicle);
+            await _context.SaveChangesAsync();
+            return ApiSuccess();
         }
         catch (FormatException ex)
         {
@@ -159,14 +174,17 @@ public class VehiclesController
     }
 
     [HttpDelete("{vehicleId}")]
-    public async Task<IActionResult> Delete(string vehicleId)
+    public async Task<IActionResult> Delete(int vehicleId)
     {
         try
         {
-            if (!await _vehicleService.DeleteAsync(vehicleId))
+            var vehicle = await _context.Vehicles.FindAsync(vehicleId);
+            if (vehicle is null)
                 return ApiError(ApiResultCode.NotFound);
-            
-            return Ok(Responses.SuccessResponse());
+
+            _context.Vehicles.Remove(vehicle);
+            await _context.SaveChangesAsync();
+            return ApiSuccess();
         }
         catch (FormatException ex)
         {
@@ -179,16 +197,16 @@ public class VehiclesController
     }
 
     [HttpPost("{vehicleId}/checkConnection")]
-    public async Task<IActionResult> CheckConnection(string vehicleId)
+    public async Task<IActionResult> CheckConnection(int vehicleId)
     {
         // TODO: verificar conectividad con el dispositivo
-        return Ok(Responses.ErrorResponse(ApiResultCode.NotImplemented));
+        return ApiError(ApiResultCode.NotImplemented);
     }
 
     [HttpGet("{vehicleid}/events")]
-    [ProducesResponseType<GenericResponse<ResultCollection<DeviceEvent>>>(200)]
+    [ProducesResponseType<GenericResponse<ResultCollection<DeviceEventDto>>>(200)]
     public async Task<IActionResult> GetEvents(
-        string vehicleid,
+        int vehicleid,
         DateTimeOffset? periodStart,
         DateTimeOffset? periodEnd,
         int skip = 0,
@@ -197,11 +215,11 @@ public class VehiclesController
     {
         try
         {
-            var result = await _vehicleService.GetEventsAsync(vehicleid, skip, limit);
-            if (result is null)
+            var list = await _deviceEventService.GetAsync(vehicleid, skip, limit);
+            if (list is null)
                 return ApiError(ApiResultCode.Failed, "Vehicle does not exist");
 
-            return ApiSuccess(result);
+            return ApiSuccessCollection(list.Select(x => (DeviceEventDto)x!));
         }
         catch (FormatException ex)
         {

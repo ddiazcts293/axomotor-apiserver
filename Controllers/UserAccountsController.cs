@@ -1,13 +1,15 @@
 using AxoMotor.ApiServer.ApiModels;
 using AxoMotor.ApiServer.ApiModels.Enums;
+using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.DTOs.Responses;
 using AxoMotor.ApiServer.Helpers;
-using AxoMotor.ApiServer.Models;
+using AxoMotor.ApiServer.Models.Catalog;
 using AxoMotor.ApiServer.Models.Enums;
 using AxoMotor.ApiServer.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AxoMotor.ApiServer.Controllers;
 
@@ -15,7 +17,7 @@ namespace AxoMotor.ApiServer.Controllers;
 [ProducesResponseType<BasicResponse>(200)]
 [ProducesResponseType<ErrorResponse>(400)]
 [ProducesResponseType<ErrorResponse>(500)]
-public class UserAccountsController(UserAccountService service) : ApiControllerBase
+public class UserAccountsController(AxoMotorContext context) : ApiControllerBase
 {
     /*
         TODO: agregar autenticación
@@ -24,10 +26,10 @@ public class UserAccountsController(UserAccountService service) : ApiControllerB
         - Implementar endpoint para restablecer la contraseña
     */
 
-    private readonly UserAccountService _userAccountService = service;
+    private readonly AxoMotorContext _context = context;
 
     [HttpGet("me")]
-    [ProducesResponseType<GenericResponse<UserAccountDto>>(200)]
+    [ProducesResponseType<GenericResponse<UserAccount>>(200)]
     public async Task<IActionResult> GetMe()
     {
         // TODO: agregar endpoint para obtener información del mismo usuario
@@ -44,10 +46,13 @@ public class UserAccountsController(UserAccountService service) : ApiControllerB
             {
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                Type = request.Type,
+                Role = request.Role,
+                Email = request.Email,
+                PhoneNumber = request.PhoneNumber
             };
 
-            await _userAccountService.RegisterAsync(account);
+            await _context.UserAccounts.AddAsync(account);
+            await _context.SaveChangesAsync();
 
             var response = new RegisterUserAccountResponse()
             {
@@ -68,19 +73,26 @@ public class UserAccountsController(UserAccountService service) : ApiControllerB
     }
 
     [HttpGet]
-    [ProducesResponseType<GenericResponse<ResultCollection<UserAccountDto>>>(200)]
+    [ProducesResponseType<GenericResponse<ResultCollection<UserAccount>>>(200)]
     public async Task<IActionResult> Get(
-        UserAccountType? type,
+        UserAccountRole? role,
         UserAccountStatus? status,
         bool? isLoggedIn
     )
     {
         try
         {
-            var userAccounts = await _userAccountService.GetAsync(
-                type, status, isLoggedIn);
+            var query = _context.UserAccounts.AsQueryable();
 
-            return ApiSuccess(userAccounts.Select(UserAccountDto.Convert));
+            if (role is not null)
+                query = query.Where(x => x.Role == role);
+            if (status is not null)
+                query = query.Where(x => x.Status == status);
+            if (isLoggedIn is not null)
+                query = query.Where(x => x.IsLoggedIn == isLoggedIn);
+
+            var userAccounts = await query.ToListAsync();
+            return ApiSuccess(userAccounts);
         }
         catch (FormatException ex)
         {
@@ -92,17 +104,17 @@ public class UserAccountsController(UserAccountService service) : ApiControllerB
         }
     }
 
-    [HttpGet("{id}")]
-    [ProducesResponseType<GenericResponse<UserAccountDto>>(200)]
-    public async Task<IActionResult> Get(string id)
+    [HttpGet("{userId}")]
+    [ProducesResponseType<GenericResponse<UserAccount>>(200)]
+    public async Task<IActionResult> Get(int userId)
     {
         try
         {
-            var userAccount = await _userAccountService.GetAsync(id);
+            var userAccount = await _context.UserAccounts.FindAsync(userId);
             if (userAccount is null)
                 return ApiError(ApiResultCode.NotFound);
 
-            return ApiSuccess(UserAccountDto.Convert(userAccount));
+            return ApiSuccess(userAccount);
         }
         catch (FormatException ex)
         {
@@ -114,17 +126,28 @@ public class UserAccountsController(UserAccountService service) : ApiControllerB
         }
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, UpdateUserAccountRequest request)
+    [HttpPut("{userId}")]
+    public async Task<IActionResult> Update(int userId, UpdateUserAccountRequest request)
     {
         try
         {
-            bool result = await _userAccountService.UpdateAsync(
-                id, request.FirstName, request.LastName, request.Status);
-
-            if (!result)
+            var userAccount = await _context.UserAccounts.FindAsync(userId);
+            if (userAccount is null)
                 return ApiError(ApiResultCode.NotFound);
 
+            if (request.FirstName is not null)
+                userAccount.FirstName = request.FirstName;
+            if (request.LastName is not null)
+                userAccount.LastName = request.LastName;
+            if (request.Email is not null)
+                userAccount.Email = request.Email;
+            if (request.PhoneNumber is not null)
+                userAccount.PhoneNumber = request.PhoneNumber;
+            if (request.Status is not null)
+                userAccount.Status = request.Status.Value;
+
+            _context.UserAccounts.Update(userAccount);
+            await _context.SaveChangesAsync();
             return ApiSuccess();
         }
         catch (FormatException ex)
@@ -137,30 +160,33 @@ public class UserAccountsController(UserAccountService service) : ApiControllerB
         }
     }
 
-    [HttpPut("{id}/resetPassword")]
-    public async Task<IActionResult> ResetPassword(string id)
+    [HttpDelete("{userId}")]
+    public async Task<IActionResult> Delete(int userId)
+    {
+        try
+        {
+            var userAccount = await _context.UserAccounts.FindAsync(userId);
+            if (userAccount is null)
+                return ApiError(ApiResultCode.NotFound);
+
+            _context.UserAccounts.Remove(userAccount);
+            await _context.SaveChangesAsync();
+            return ApiSuccess();
+        }
+        catch (FormatException ex)
+        {
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return ApiServerError(ex);
+        }
+    }
+
+    [HttpPut("{userId}/resetPassword")]
+    public async Task<IActionResult> ResetPassword(string userId)
     {
         // TODO: agregar restablecimiento de contraseña
-        return Ok(Responses.ErrorResponse(ApiResultCode.NotImplemented));
-    }
-
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id)
-    {
-        try
-        {
-            if (!await _userAccountService.DeleteAsync(id))
-                return ApiError(ApiResultCode.NotFound);
-
-            return ApiSuccess();
-        }
-        catch (FormatException ex)
-        {
-            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return ApiServerError(ex);
-        }
+        return ApiError(ApiResultCode.NotImplemented);
     }
 }

@@ -10,6 +10,19 @@ namespace AxoMotor.ApiServer.Models;
 public class TripPosition
 {
     /// <summary>
+    /// Identificador de la posición.
+    /// </summary>
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = null!;
+
+    /// <summary>
+    /// Identificador del viaje asociado.
+    /// </summary>
+    [BsonRepresentation(BsonType.ObjectId)]
+    public required string TripId { get; set; }
+
+    /// <summary>
     /// Coordenadas de la posición.
     /// </summary>
     public required GeoJson2DGeographicCoordinates Coordinates { get; set; }
@@ -17,11 +30,11 @@ public class TripPosition
     /// <summary>
     /// Velocidad registrada en el instante.
     /// </summary>
-    public float Speed { get; set; }
+    public required float Speed { get; set; }
 
     /// <summary>
     /// Marca de tiempo del instante.
     /// </summary>
     [BsonRepresentation(BsonType.DateTime)]
-    public DateTimeOffset Timestamp { get; set; }
+    public required DateTimeOffset Timestamp { get; set; }
 }

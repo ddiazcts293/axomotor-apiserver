@@ -17,16 +17,19 @@ public class Trip
     public string Id { get; set; } = null!;
 
     /// <summary>
+    /// Número de viaje.
+    /// </summary>
+    public int Number { get; set; }
+
+    /// <summary>
     /// Identificador del conductor asociado.
     /// </summary>
-    [BsonRepresentation(BsonType.ObjectId)]
-    public required string Driver { get; set; }
+    public required int DriverId { get; set; }
 
     /// <summary>
     /// Identificador del vehículo asociado.
     /// </summary>
-    [BsonRepresentation(BsonType.ObjectId)]
-    public required string Vehicle { get; set; }
+    public required int VehicleId { get; set; }
 
     /// <summary>
     /// Estado del viaje.
@@ -34,24 +37,20 @@ public class Trip
     public TripStatus Status { get; set; }
 
     /// <summary>
-    /// Punto de partida del viaje.
+    /// Origen del viaje.
     /// </summary>
-    public required TripLocation StartingPoint { get; set; }
+    public required TripLocation Origin { get; set; }
 
     /// <summary>
-    /// Destino final del viaje.
+    /// Destino del viaje.
     /// </summary>
-    public required TripLocation FinalDestination { get; set; }
+    public required TripLocation Destination { get; set; }
 
     /// <summary>
     /// Lista de paradas planeadas durante el viaje.
     /// </summary>
-    public IList<TripLocation>? PlannedStops { get; set; }
-
-    /// <summary>
-    /// Lista de posiciones del viaje.
-    /// </summary>
-    public IList<TripPosition> RecordedPositions { get; set; } = [];
+    [BsonIgnoreIfNull]
+    public IList<TripPlannedStop>? PlannedStops { get; set; }
 
     /// <summary>
     /// Estadísticas del viaje.
@@ -62,8 +61,7 @@ public class Trip
     /// <summary>
     /// Identificador del agente que creó el viaje.
     /// </summary>
-    [BsonRepresentation(BsonType.ObjectId)]
-    public required string CreatedBy { get; set; }
+    public required int CreatedById { get; set; }
 
     /// <summary>
     /// Fecha y hora de cración del viaje.
@@ -72,15 +70,24 @@ public class Trip
     public DateTimeOffset CreationDate { get; set; }
 
     /// <summary>
+    /// Identificado del agente que actualizó el viaje.
+    /// </summary>
+    public int? UpdatedById { get; set; }
+
+    /// <summary>
     /// Fecha y hora de última actualización del viaje.
     /// </summary>
     [BsonIgnoreIfNull]
     [BsonRepresentation(BsonType.DateTime)]
     public DateTimeOffset? LastUpdateDate { get; set; }
 
+    #region BSON Ignore
+
     [BsonIgnore]
     public bool IsFinished => Status is
         TripStatus.Cancelled or
         TripStatus.Finished or
         TripStatus.Aborted;
+
+    #endregion
 }

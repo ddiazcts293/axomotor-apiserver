@@ -40,5 +40,5 @@ public enum TripStatus
     /// <summary>
     /// Señal de GPS perdida.
     /// </summary>
-    GpsSignalLost
+    GpsSignalLoss
 }

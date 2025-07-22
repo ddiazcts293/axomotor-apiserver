@@ -5,55 +5,60 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace AxoMotor.ApiServer.Models;
 
 /// <summary>
-/// Representa un incidente registrado.
+/// Representa una incidencia registrada.
 /// </summary>
 public class Incident
 {
     /// <summary>
-    /// Identificador del incidente.
+    /// Identificador de la incidencia.
     /// </summary>
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = null!;
 
     /// <summary>
-    /// Identificador del viaje asociado al incidente.
+    /// Número de incidencia.
     /// </summary>
-    [BsonRepresentation(BsonType.ObjectId)]
-    public required string Trip { get; set; }
+    public int Number { get; set; }
 
     /// <summary>
-    /// Razón del incidente.
+    /// Identificador del viaje asociado a la incidencia.
+    /// </summary>
+    [BsonRepresentation(BsonType.ObjectId)]
+    public required string TripId { get; set; }
+
+    /// <summary>
+    /// Razón de la incidencia.
     /// </summary>
     public required string Code { get; set; }
 
     /// <summary>
-    /// Tipo de incidente.
+    /// Tipo de incidencia.
     /// </summary>
     public IncidentType Type { get; set; }
 
     /// <summary>
-    /// Estado del incidente.
+    /// Estado de la incidencia.
     /// </summary>
     public IncidentStatus Status { get; set; }
 
     /// <summary>
-    /// Prioridad del incidente.
+    /// Prioridad de la incidencia.
     /// </summary>
     public IncidentPriority Priority { get; set; }
 
     /// <summary>
-    /// Última posición conocida cuando se registro el incidente.
+    /// Última posición conocida cuando se registro la incidencia.
     /// </summary>
     public TripPosition? LastKnownPosition { get; set; }
 
     /// <summary>
-    /// Descripción del incidente dada por el conductor sobre el incidente.
+    /// Descripción de la incidencia dada por el conductor.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// Comentarios adicionales acerca del incidente.
+    /// Comentarios adicionales acerca de la incidencia.
     /// </summary>
     public string? Comments { get; set; }
 
@@ -61,40 +66,50 @@ public class Incident
     /// Incidente relacionado.
     /// </summary>
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? RelatedIncident { get; set; }
+    public string? RelatedIncidentId { get; set; }
 
     /// <summary>
-    /// Lista de fotografías adjuntas al incidente.
+    /// Lista de fotografías adjuntas a la incidencia.
     /// </summary>
-    public IList<IncidentPicture> Pictures { get; set; } = [];
+    public IList<IncidentPicture>? Pictures { get; set; }
 
     /// <summary>
-    /// Fecha y hora de cración del incidente.
+    /// Fecha y hora de registro de la incidencia.
     /// </summary>
     [BsonRepresentation(BsonType.DateTime)]
-    public DateTimeOffset CreationDate { get; set; }
+    public DateTimeOffset RegistrationDate { get; set; }
 
     /// <summary>
-    /// Fecha y hora de última actualización del incidente.
+    /// Fecha y hora de revisión de la incidencia.
     /// </summary>
     [BsonIgnoreIfNull]
     [BsonRepresentation(BsonType.DateTime)]
-    public DateTimeOffset? LastUpdateDate { get; set; }
+    public DateTimeOffset? RevisionDate { get; set; }
 
     /// <summary>
-    /// Identificador del agente que revisó el incidente.
+    /// Identificador de usuario que registro la incidencia.
     /// </summary>
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string? RevisedBy { get; set; }
+    public int RegisteredById { get; set; }
 
     /// <summary>
-    /// Identificador del agente que cerró el incidente.
+    /// Identificador del agente que revisó la incidencia.
     /// </summary>
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string? ClosedBy { get; set; }
+    public int? RevisedById { get; set; }
 
+    /// <summary>
+    /// Identificador del agente que cerró la incidencia.
+    /// </summary>
+    public int? ClosedById { get; set; }
+
+    #region BSON ignore
+
+    /// <summary>
+    /// Indica si la incidencia fue cerrada o descartada.
+    /// </summary>
     [BsonIgnore]
-    public bool IsClosedOrDiscarded => Status is
+    public bool WasClosedOrDiscarded => Status is
         IncidentStatus.Closed or
         IncidentStatus.Discarded;
+
+    #endregion
 }

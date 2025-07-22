@@ -1,13 +1,16 @@
 using AxoMotor.ApiServer.Config;
+using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Models.Enums;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace AxoMotor.ApiServer.Services;
 
 public class IncidentService
 {
+    private readonly MongoDBCollections _dbCollectionNames;
     private readonly IMongoCollection<Incident> _collection;
 
     public IncidentService(IOptions<MongoDBSettings> settings)
@@ -18,11 +21,13 @@ public class IncidentService
         _collection = database.GetCollection<Incident>(
             settings.Value.Collections.Incidents
         );
+
+        _dbCollectionNames = settings.Value.Collections;
     }
 
     public async Task CreateAsync(Incident incident)
     {
-        incident.CreationDate = DateTimeOffset.UtcNow;
+        incident.RegistrationDate = DateTimeOffset.UtcNow;
         await _collection.InsertOneAsync(incident);
     }
 
@@ -35,46 +40,39 @@ public class IncidentService
         IncidentType? type = null,
         IncidentStatus? status = null,
         IncidentPriority? priority = null,
-        string? revisedBy = null,
-        string? closedBy = null,
-        DateTimeOffset? periodStart = null,
-        DateTimeOffset? periodEnd = null
+        int? registeredById = null,
+        int? revisedById = null,
+        int? closedById = null
     )
-    { 
+    {
         var builder = Builders<Incident>.Filter;
+        var projection = new ProjectionDefinitionBuilder<Incident>()
+            .Exclude(x => x.Pictures);
+
         List<FilterDefinition<Incident>> filters = [];
 
         if (!string.IsNullOrWhiteSpace(code))
-        {
             filters.Add(builder.Eq(x => x.Code, code));
-        }
         if (type is not null)
-        {
             filters.Add(builder.Eq(x => x.Type, type));
-        }
         if (status is not null)
-        {
             filters.Add(builder.Eq(x => x.Status, status));
-        }
         if (priority is not null)
-        {
             filters.Add(builder.Eq(x => x.Priority, priority));
-        }
-        if (!string.IsNullOrWhiteSpace(revisedBy))
-        {
-            filters.Add(builder.Eq(x => x.RevisedBy, revisedBy));
-        }
-        if (!string.IsNullOrWhiteSpace(closedBy))
-        {
-            filters.Add(builder.Eq(x => x.ClosedBy, closedBy));
-        }
-        
-        if (filters.Count == 0)
-        {
-            filters.Add(builder.Empty);
-        }
+        if (registeredById is not null)
+            filters.Add(builder.Eq(x => x.RegisteredById, registeredById));
+        if (revisedById is not null)
+            filters.Add(builder.Eq(x => x.RevisedById, revisedById));
+        if (closedById is not null)
+            filters.Add(builder.Eq(x => x.ClosedById, closedById));
 
-        return await _collection.Find(builder.And(filters)).ToListAsync();
+        if (filters.Count == 0)
+            filters.Add(builder.Empty);
+
+        return await _collection
+            .Find(builder.And(filters))
+            .Project<Incident>(projection)
+            .ToListAsync();
     }
 
     public async Task<bool> UpdateAsync(
@@ -86,24 +84,16 @@ public class IncidentService
     )
     {
         var filter = Builders<Incident>.Filter.Eq(x => x.Id, incidentId);
-        var update = Builders<Incident>.Update.CurrentDate(x => x.LastUpdateDate);
+        var update = Builders<Incident>.Update.CurrentDate(x => x.RevisionDate);
 
         if (status is not null)
-        {
             update = update.Set(x => x.Status, status);
-        }
         if (priority is not null)
-        {
             update = update.Set(x => x.Priority, priority);
-        }
         if (comments is not null)
-        {
             update = update.Set(x => x.Comments, comments);
-        }
         if (relatedIncident is not null)
-        {
-            update = update.Set(x => x.RelatedIncident, relatedIncident);
-        }
+            update = update.Set(x => x.RelatedIncidentId, relatedIncident);
 
         var result = await _collection.UpdateOneAsync(filter, update);
         return result.IsAcknowledged && result.ModifiedCount > 0;

@@ -1,3 +1,6 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace AxoMotor.ApiServer.Models;
 
 /// <summary>
@@ -5,6 +8,11 @@ namespace AxoMotor.ApiServer.Models;
 /// </summary>
 public class TripStats
 {
+    /// <summary>
+    /// Duración total del viaje.
+    /// </summary>
+    public TimeSpan TotalDuration { get; set; }
+
     /// <summary>
     /// Distancia recorrida.
     /// </summary>
@@ -19,4 +27,10 @@ public class TripStats
     /// Velocidad promedio.
     /// </summary>
     public float AverageSpeed { get; set; }
+
+    /// <summary>
+    /// Tiempo total que el vehículo permaneció no localizable.
+    /// </summary>
+    [BsonTimeSpanOptions(BsonType.Int32, Units = MongoDB.Bson.Serialization.Options.TimeSpanUnits.Minutes)]
+    public TimeSpan GpsSignalLostDuration { get; set; }
 }

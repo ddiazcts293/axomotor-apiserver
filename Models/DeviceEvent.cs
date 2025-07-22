@@ -10,6 +10,18 @@ namespace AxoMotor.ApiServer.Models;
 public class DeviceEvent
 {
     /// <summary>
+    /// Identificador del evento.
+    /// </summary>
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = null!;
+
+    /// <summary>
+    /// Identificador de vehiculo.
+    /// </summary>
+    public required int VehicleId { get; set; }
+
+    /// <summary>
     /// Código del evento.
     /// </summary>
     public required string Code { get; set; }

@@ -33,45 +33,32 @@ public class IncidentsController
     {
         try
         {
-            // obtiene el código de incidente es válido
+            // obtiene el código de incidencia es válido
             var info = await _context.IncidentCatalog.SingleOrDefaultAsync(
                 x => x.Code == request.Code);
             if (info is null)
-            {
                 return ApiError(ApiResultCode.InvalidArgs, "Invalid incident code");
-            }
 
             // verifica si el viaje existe
             var trip = await _tripService.GetAsync(request.TripId);
             if (trip is null)
-            {
                 return ApiError(ApiResultCode.NotFound, "The trip does not exist");
-            }
 
             // verifica si el viaje fue finalizado
             if (trip.IsFinished)
-            {
                 return ApiError(ApiResultCode.InvalidState, "Trip was finished");
-            }
 
             Incident incident = new()
             {
+                // TODO: obtener identificador de usuario que realiza la acción
+                RegisteredById = trip.DriverId,
                 Code = request.Code,
-                Trip = request.TripId,
+                TripId = request.TripId,
                 Priority = info.Priority,
                 Type = info.Type,
-                LastKnownPosition = new()
-                {
-                    Coordinates = new(
-                        request.LastKnownPosition.Longitude,
-                        request.LastKnownPosition.Latitude
-                    ),
-                    Speed = request.LastKnownPosition.Speed,
-                    Timestamp = request.LastKnownPosition.Timestamp
-                },
                 Description = request.Description,
-                RelatedIncident = request.RelatedIncidentId,
-                // por ahora se omite la subida de imagenes
+                RelatedIncidentId = request.RelatedIncidentId,
+                // TODO: implementar subidad de imagenes
             };
 
             await _incidentService.CreateAsync(incident);
@@ -84,7 +71,7 @@ public class IncidentsController
                 Type = incident.Type
             };
 
-            return ApiSuccess();
+            return ApiSuccess(response);
         }
         catch (FormatException ex)
         {
@@ -103,10 +90,9 @@ public class IncidentsController
         IncidentType? type,
         IncidentStatus? status,
         IncidentPriority? priority,
-        string? revisedBy,
-        string? closedBy,
-        DateTimeOffset? periodStart,
-        DateTimeOffset? periodEnd
+        int? registeredBy,
+        int? revisedBy,
+        int? closedBy
     )
     {
         try
@@ -116,26 +102,45 @@ public class IncidentsController
                 bool isValidCode = await _context.IncidentCatalog.AnyAsync(
                     x => x.Code == incidentCode);
 
-                if (!isValidCode)
-                {
-                    return ApiError(
-                        ApiResultCode.InvalidArgs, "Invalid incident code"
-                    );
-                }
+                if (!isValidCode) return ApiError(
+                    ApiResultCode.InvalidArgs, "Invalid incident code"
+                );
             }
 
-            var vehicles = await _incidentService.GetAsync(
+            // obtiene la lista de usuarios en mysql
+            var users = await _context.UserAccounts.ToListAsync();
+            // obtiene la lista de incidentes en mongodb
+            var incidents = await _incidentService.GetAsync(
                 incidentCode,
                 type,
                 status,
                 priority,
+                registeredBy,
                 revisedBy,
-                closedBy,
-                periodStart,
-                periodEnd
+                closedBy
             );
 
-            return ApiSuccessCollection(vehicles.Select(IncidentDto.Convert));
+            var results = incidents.Select(x => new IncidentDto
+            {
+                IncidentId = x.Id,
+                Number = x.Number,
+                TripId = x.TripId,
+                Code = x.Code,
+                Type = x.Type,
+                Status = x.Status,
+                Priority = x.Priority,
+                LastKnownPosition = x.LastKnownPosition,
+                Description = x.Description,
+                Comments = x.Comments,
+                RelatedIncidentId = x.RelatedIncidentId,
+                RegistrationDate = x.RegistrationDate,
+                RevisionDate = x.RevisionDate,
+                RegisteredBy = users.SingleOrDefault(y => y.Id == x.RegisteredById),
+                RevisedBy = users.SingleOrDefault(y => y.Id == x.RevisedById),
+                ClosedBy = users.SingleOrDefault(y => y.Id == x.ClosedById)
+            });
+
+            return ApiSuccessCollection(results);
         }
         catch (FormatException ex)
         {
@@ -153,13 +158,37 @@ public class IncidentsController
     {
         try
         {
+            // obtiene la lista de usuarios en mysql
+            var users = await _context.UserAccounts.ToListAsync();
+            // obtiene el incidente asociado
             var incident = await _incidentService.GetAsync(incidentId);
             if (incident is null)
             {
                 return ApiError(ApiResultCode.NotFound);
             }
 
-            return ApiSuccess(IncidentDto.Convert(incident));
+            var result = new IncidentDto
+            {
+                IncidentId = incident.Id,
+                Number = incident.Number,
+                TripId = incident.TripId,
+                Code = incident.Code,
+                Type = incident.Type,
+                Status = incident.Status,
+                Priority = incident.Priority,
+                LastKnownPosition = incident.LastKnownPosition,
+                Description = incident.Description,
+                Comments = incident.Comments,
+                RelatedIncidentId = incident.RelatedIncidentId,
+                RegistrationDate = incident.RegistrationDate,
+                RevisionDate = incident.RevisionDate,
+                Pictures = incident.Pictures ?? [],
+                RegisteredBy = users.SingleOrDefault(y => y.Id == incident.RegisteredById),
+                RevisedBy = users.SingleOrDefault(y => y.Id == incident.RevisedById),
+                ClosedBy = users.SingleOrDefault(y => y.Id == incident.ClosedById)
+            };
+
+            return ApiSuccess(result);
         }
         catch (FormatException ex)
         {
@@ -176,21 +205,17 @@ public class IncidentsController
     {
         try
         {
+            // verifica si la incidencia existe
             var incident = await _incidentService.GetAsync(incidentId);
-            // verifica si el incidente no existe
             if (incident is null)
-            {
                 return ApiError(ApiResultCode.NotFound);
-            }
-
-            // verifica si el incidente está cerrado o descartado
-            if (incident.IsClosedOrDiscarded)
-            {
+            
+            // verifica si la incidencia está cerrado o descartado
+            if (incident.WasClosedOrDiscarded)
                 return ApiError(
                     ApiResultCode.InvalidState,
                     "Incident was closed"
                 );
-            }
 
             bool result = await _incidentService.UpdateAsync(
                 incidentId,
@@ -201,10 +226,8 @@ public class IncidentsController
             );
 
             if (!result)
-            {
                 return ApiError(ApiResultCode.Failed);
-            }
-
+            
             return ApiSuccess();
         }
         catch (FormatException ex)
@@ -223,10 +246,8 @@ public class IncidentsController
         try
         {
             if (!await _incidentService.DeleteAsync(incidentId))
-            {
                 return ApiError(ApiResultCode.NotFound);
-            }
-
+            
             return ApiSuccess();
         }
         catch (FormatException ex)

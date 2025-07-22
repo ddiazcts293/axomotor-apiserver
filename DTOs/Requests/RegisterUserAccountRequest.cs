@@ -11,8 +11,13 @@ public class RegisterUserAccountRequest
     [Length(3, 40)]
     public required string LastName { get; set; }
 
+    [MaxLength(40)]
     [DataType(DataType.EmailAddress)]
     public required string Email { get; set; }
 
-    public required UserAccountType Type { get; set; }
+    [MaxLength(12)]
+    [DataType(DataType.PhoneNumber)]
+    public required string PhoneNumber { get; set; }
+
+    public required UserAccountRole Role { get; set; }
 }

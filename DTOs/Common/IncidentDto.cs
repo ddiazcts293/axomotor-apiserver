@@ -7,47 +7,52 @@ namespace AxoMotor.ApiServer.DTOs.Common;
 public class IncidentDto
 {
     /// <summary>
-    /// Identificador del incidente.
+    /// Identificador de la incidencia.
     /// </summary>
     public required string IncidentId { get; set; }
 
     /// <summary>
-    /// Identificador del viaje asociado al incidente.
+    /// Número de incidencia.
+    /// </summary>
+    public required int Number { get; set; }
+
+    /// <summary>
+    /// Identificador del viaje asociado a la incidencia.
     /// </summary>
     public required string TripId { get; set; }
 
     /// <summary>
-    /// Razón del incidente.
+    /// Razón de la incidencia.
     /// </summary>
     public required string Code { get; set; }
 
     /// <summary>
-    /// Tipo de incidente.
+    /// Tipo de incidencia.
     /// </summary>
-    public IncidentType Type { get; set; }
+    public required IncidentType Type { get; set; }
 
     /// <summary>
-    /// Estado del incidente.
+    /// Estado de la incidencia.
     /// </summary>
-    public IncidentStatus Status { get; set; }
+    public required IncidentStatus Status { get; set; }
 
     /// <summary>
-    /// Prioridad del incidente.
+    /// Prioridad de la incidencia.
     /// </summary>
-    public IncidentPriority Priority { get; set; }
+    public required IncidentPriority Priority { get; set; }
 
     /// <summary>
-    /// Última posición conocida cuando se registro el incidente.
+    /// Última posición conocida cuando se registro la incidencia.
     /// </summary>
     public TripPositionDto? LastKnownPosition { get; set; }
 
     /// <summary>
-    /// Descripción del incidente dada por el conductor sobre el incidente.
+    /// Descripción de la incidencia dada por el conductor sobre la incidencia.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// Comentarios adicionales acerca del incidente.
+    /// Comentarios adicionales acerca de la incidencia.
     /// </summary>
     public string? Comments { get; set; }
 
@@ -57,66 +62,33 @@ public class IncidentDto
     public string? RelatedIncidentId { get; set; }
 
     /// <summary>
-    /// Lista de fotografías adjuntas al incidente.
+    /// Lista de fotografías adjuntas a la incidencia.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IList<IncidentPictureDto>? Pictures { get; set; }
+    public IList<IncidentPicture>? Pictures { get; set; }
 
     /// <summary>
-    /// Fecha y hora de cración del incidente.
+    /// Fecha y hora de cración de la incidencia.
     /// </summary>
-    public DateTimeOffset CreationDate { get; set; }
+    public required DateTimeOffset RegistrationDate { get; set; }
 
     /// <summary>
-    /// Fecha y hora de última actualización del incidente.
+    /// Fecha y hora de revisión de la incidencia.
     /// </summary>
-    public DateTimeOffset? LastUpdateDate { get; set; }
+    public DateTimeOffset? RevisionDate { get; set; }
 
     /// <summary>
-    /// Identificador del agente que revisó el incidente.
+    /// Identificador de usuario que registro la incidencia.
     /// </summary>
-    public string? RevisedById { get; set; }
+    public SimpleUserAccountDto? RegisteredBy { get; set; }
 
     /// <summary>
-    /// Identificador del agente que cerró el incidente.
+    /// Identificador del agente que revisó la incidencia.
     /// </summary>
-    public string? ClosedById { get; set; }
+    public SimpleUserAccountDto? RevisedBy { get; set; }
 
-    public static IncidentDto Convert(Incident incident)
-    {
-        var dto = new IncidentDto()
-        {
-            IncidentId = incident.Id,
-            TripId = incident.Trip,
-            Code = incident.Code,
-            Type = incident.Type,
-            Status = incident.Status,
-            Priority = incident.Priority,
-            Description = incident.Description,
-            Comments = incident.Comments,
-            RelatedIncidentId = incident.RelatedIncident,
-            CreationDate = incident.CreationDate,
-            LastUpdateDate = incident.LastUpdateDate,
-            RevisedById = incident.RevisedBy,
-            ClosedById = incident.ClosedBy
-        };
-
-        if (incident.LastKnownPosition is not null)
-        {
-            dto.LastKnownPosition = TripPositionDto.Convert(incident.LastKnownPosition);
-        }
-
-        if (incident.Pictures is not null && incident.Pictures.Any())
-        {
-            dto.Pictures = [.. incident.Pictures
-                .Select(x => new IncidentPictureDto()
-                {
-                    FileId = x.FileId,
-                    Position = TripPositionDto.Convert(x.Position)
-                })
-            ];
-        }
-
-        return dto;
-    }
+    /// <summary>
+    /// Identificador del agente que cerró la incidencia.
+    /// </summary>
+    public SimpleUserAccountDto? ClosedBy { get; set; }
 }

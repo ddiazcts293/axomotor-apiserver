@@ -34,9 +34,4 @@ public class TripLocation
     /// </summary>
     [BsonRepresentation(BsonType.DateTime)]
     public DateTimeOffset DateTime { get; set; }
-
-    /// <summary>
-    /// Intervalo de tiempo de duración de presencia en la parada.
-    /// </summary>
-    public TimeSpan? Duration { get; set; }
 }
