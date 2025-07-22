@@ -291,6 +291,7 @@ public class TripsController
         }
     }
 
+    [Obsolete]
     [HttpPost("{tripId}/positions")]
     public async Task<IActionResult> PostPosition(string tripId, TripPositionDto position)
     {
