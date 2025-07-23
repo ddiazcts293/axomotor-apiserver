@@ -80,7 +80,9 @@ public class IncidentService
         IncidentStatus? status = null,
         IncidentPriority? priority = null,
         string? comments = null,
-        string? relatedIncident = null
+        string? relatedIncident = null,
+        IList<string>? picturesToAdd = null,
+        IList<string>? picturesToDelete = null
     )
     {
         var filter = Builders<Incident>.Filter.Eq(x => x.Id, incidentId);
@@ -94,6 +96,8 @@ public class IncidentService
             update = update.Set(x => x.Comments, comments);
         if (relatedIncident is not null)
             update = update.Set(x => x.RelatedIncidentId, relatedIncident);
+
+        // TODO: implementar actualización de lista de imagenes de incidencia
 
         var result = await _collection.UpdateOneAsync(filter, update);
         return result.IsAcknowledged && result.ModifiedCount > 0;

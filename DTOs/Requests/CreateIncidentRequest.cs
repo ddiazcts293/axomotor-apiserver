@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using AxoMotor.ApiServer.Data;
+using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.Helpers;
 
 namespace AxoMotor.ApiServer.DTOs.Requests;
@@ -21,5 +22,5 @@ public class CreateIncidentRequest
     public string? RelatedIncidentId { get; set; }
 
     [MaxLength(Constants.MaxIncidentPictureCount)]
-    public IList<IFormFile>? Pictures { get; set; }
+    public IList<IncidentPictureDto>? Pictures { get; set; }
 }

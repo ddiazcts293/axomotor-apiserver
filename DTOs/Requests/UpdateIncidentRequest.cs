@@ -16,7 +16,7 @@ public class UpdateIncidentRequest
     public string? RelatedIncident { get; set; }
 
     [MaxLength(Constants.MaxIncidentPictureCount)]
-    public IList<IFormFile>? PicturesToAdd { get; set; }
+    public IList<string>? PicturesToAdd { get; set; }
 
     [MaxLength(Constants.MaxIncidentPictureCount)]
     public IList<string>? PicturesToDelete { get; set; }

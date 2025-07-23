@@ -29,7 +29,7 @@ public class IncidentsController
 
     [HttpPost]
     [ProducesResponseType<GenericResponse<CreateIncidentResponse>>(200)]
-    public async Task<IActionResult> Create([FromForm] CreateIncidentRequest request)
+    public async Task<IActionResult> Create(CreateIncidentRequest request)
     {
         try
         {
@@ -58,7 +58,7 @@ public class IncidentsController
                 Type = info.Type,
                 Description = request.Description,
                 RelatedIncidentId = request.RelatedIncidentId,
-                // TODO: implementar subidad de imagenes
+                Pictures = request.Pictures?.Select(x => (IncidentPicture)x!).ToList()
             };
 
             await _incidentService.CreateAsync(incident);
@@ -201,7 +201,7 @@ public class IncidentsController
     }
 
     [HttpPut("{incidentId}")]
-    public async Task<IActionResult> Update(string incidentId, [FromForm] UpdateIncidentRequest request)
+    public async Task<IActionResult> Update(string incidentId, UpdateIncidentRequest request)
     {
         try
         {
@@ -222,7 +222,9 @@ public class IncidentsController
                 request.Status,
                 request.Priority,
                 request.Comments,
-                request.RelatedIncident
+                request.RelatedIncident,
+                request.PicturesToAdd,
+                request.PicturesToDelete
             );
 
             if (!result)
@@ -258,12 +260,5 @@ public class IncidentsController
         {
             return ApiServerError(ex);
         }
-    }
-
-    [HttpGet("{incidentId}/pictures/{pictureNumber}")]
-    public async Task<IActionResult> GetPicture(string incidentId, int pictureNumber)
-    {
-        // TODO: obtención de imagen
-        return Ok();
     }
 }
