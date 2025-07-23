@@ -1,3 +1,4 @@
+using AxoMotor.ApiServer.Models.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver.GeoJsonObjectModel;
@@ -21,6 +22,11 @@ public class TripPosition
     /// </summary>
     [BsonRepresentation(BsonType.ObjectId)]
     public required string TripId { get; set; }
+
+    /// <summary>
+    /// Fuente de posición.
+    /// </summary>
+    public required TripPositionSource Source { get; set; }
 
     /// <summary>
     /// Coordenadas de la posición.

@@ -291,7 +291,7 @@ public class TripsController
         }
     }
 
-    [Obsolete]
+    [Obsolete("Use /api/testing/trip/{tripId}/positions instead")]
     [HttpPost("{tripId}/positions")]
     public async Task<IActionResult> PostPosition(string tripId, TripPositionDto position)
     {
@@ -310,6 +310,7 @@ public class TripsController
             {
                 TripId = tripId,
                 Speed = position.Speed,
+                Source = position.Source,
                 Timestamp = position.Timestamp,
                 Coordinates = new(position.Longitude, position.Latitude)
             };

@@ -1,10 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 using AxoMotor.ApiServer.Data;
+using AxoMotor.ApiServer.Models.Enums;
 
 namespace AxoMotor.ApiServer.DTOs.Requests;
 
 public class PostTripPositionRequest
 {
+    /// <summary>
+    /// Fuente de posición.
+    /// </summary>
+    public required TripPositionSource Source { get; set; }
+
     /// <summary>
     /// Latitud.
     /// </summary>

@@ -82,6 +82,7 @@ public class TestingController
             var tripPosition = new TripPosition()
             {
                 TripId = tripId,
+                Source = request.Source,
                 Speed = request.Speed,
                 Timestamp = DateTimeOffset.FromUnixTimeSeconds(request.Timestamp),
                 Coordinates = new(request.Longitude, request.Latitude)

@@ -1,4 +1,5 @@
 using AxoMotor.ApiServer.Models;
+using AxoMotor.ApiServer.Models.Enums;
 
 namespace AxoMotor.ApiServer.DTOs.Common;
 
@@ -7,6 +8,11 @@ namespace AxoMotor.ApiServer.DTOs.Common;
 /// </summary>
 public class TripPositionDto : PositionDtoBase
 {
+    /// <summary>
+    /// Fuente de posición.
+    /// </summary>
+    public TripPositionSource Source { get; set; }
+
     /// <summary>
     /// Velocidad registrada en el instante.
     /// </summary>
@@ -23,6 +29,7 @@ public class TripPositionDto : PositionDtoBase
         Latitude = position.Coordinates.Latitude,
         Longitude = position.Coordinates.Longitude,
         Speed = position.Speed,
+        Source = position.Source,
         Timestamp = position.Timestamp
     };
 }
