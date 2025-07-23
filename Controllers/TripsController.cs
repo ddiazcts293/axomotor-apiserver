@@ -355,7 +355,7 @@ public class TripsController
         }
     }
 
-    [HttpPost("/knownLocations")]
+    [HttpPost("knownLocations")]
     [ProducesResponseType<GenericResponse<RegisterNewKnownLocationResponse>>(200)]
     public async Task<IActionResult> RegisterKnownLocations(RegisterNewKnownLocationRequest request)
     {
@@ -386,7 +386,7 @@ public class TripsController
         }
     }
 
-    [HttpGet("/knownLocations")]
+    [HttpGet("knownLocations")]
     [ProducesResponseType<GenericResponse<ResultCollection<KnownLocation>>>(200)]
     public async Task<IActionResult> GetKnownLocations()
     {
@@ -401,7 +401,7 @@ public class TripsController
         }
     }
 
-    [HttpPut("/knownLocations/{id}")]
+    [HttpPut("knownLocations/{id}")]
     public async Task<IActionResult> UpdateKnownLocations(int id, UpdateKnownLocationRequest request)
     {
         try
@@ -444,7 +444,7 @@ public class TripsController
         }
     }
 
-    [HttpDelete("/knownLocations/{id}")]
+    [HttpDelete("knownLocations/{id}")]
     public async Task<IActionResult> DeleteKnownLocations(int id)
     {
         try
@@ -466,7 +466,7 @@ public class TripsController
         }
     }
 
-    [HttpGet("/pending/{driverId}")]
+    [HttpGet("pending/{driverId}")]
     public async Task<IActionResult> GetPendingTrip(int driverId)
     {
         try
