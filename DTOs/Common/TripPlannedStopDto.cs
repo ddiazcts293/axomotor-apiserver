@@ -5,6 +5,8 @@ namespace AxoMotor.ApiServer.DTOs.Common;
 
 public class TripPlannedStopDto : TripLocationDto
 {
+    public DateTimeOffset? ActualDateTime { get; set; }
+
     [DataType(DataType.Duration)]
     public TimeSpan? EstimatedDuration { get; set; }
 
@@ -21,6 +23,7 @@ public class TripPlannedStopDto : TripLocationDto
             Ratio = stop.Ratio,
             Latitude = stop.Coordinates.Latitude,
             Longitude = stop.Coordinates.Longitude,
+            ActualDateTime = stop.ActualDateTime,
             DateTime = stop.DateTime,
             ActualDuration = stop.ActualDuration,
             EstimatedDuration = stop.EstimatedDuration,
