@@ -278,7 +278,7 @@ public class TripsController
         {
             if (!await _tripService.DeleteAsync(tripId))
                 return ApiError(ApiResultCode.NotFound);
-            
+
             return ApiSuccess();
         }
         catch (FormatException ex)
@@ -291,7 +291,6 @@ public class TripsController
         }
     }
 
-    [Obsolete("Use /api/testing/trip/{tripId}/positions instead")]
     [HttpPost("{tripId}/positions")]
     public async Task<IActionResult> PostPosition(string tripId, TripPositionDto position)
     {
@@ -301,7 +300,7 @@ public class TripsController
             var trip = await _tripService.GetAsync(tripId.ToString());
             if (trip is null)
                 return ApiError(ApiResultCode.NotFound, "Trip does not exist");
-            
+
             // verifica si el viaje está finalizado
             if (trip.IsFinished)
                 return ApiError(ApiResultCode.Failed, "Trip was finished");
@@ -413,7 +412,7 @@ public class TripsController
 
             if (location is null)
                 return ApiError(ApiResultCode.NotFound);
-            
+
             if (request.Name is not null)
             {
                 location.Name = request.Name;
@@ -456,10 +455,63 @@ public class TripsController
 
             if (location is null)
                 return ApiError(ApiResultCode.NotFound);
-            
+
             _context.Remove(location);
             await _context.SaveChangesAsync();
             return ApiSuccess();
+        }
+        catch (Exception ex)
+        {
+            return ApiServerError(ex);
+        }
+    }
+
+    [HttpGet("/pending/{driverId}")]
+    public async Task<IActionResult> GetPendingTrip(int driverId)
+    {
+        try
+        {
+            // obtiene la lista de usuarios en mysql
+            var users = await _context.UserAccounts.ToListAsync();
+            // obtiene la información del conductor    
+            var driver = users.FirstOrDefault(x => x.Id == driverId);
+            if (driver is null)
+                return ApiError(ApiResultCode.NotFound, "Driver was not found");
+            if (driver.Role != UserAccountRole.Driver)
+                return ApiError(ApiResultCode.InvalidState, "User is not a driver");
+            if (driver.Status != UserAccountStatus.Enabled)
+                return ApiError(ApiResultCode.InvalidState, "User account is disabled");
+            
+            // obtiene el viaje pendiente
+            var trip = await _tripService.GetPendingAsync(driverId);
+            if (trip is null)
+                return ApiSuccess();
+
+            var result = new TripDto
+            {
+                TripId = trip.Id,
+                Number = trip.Number,
+                Status = trip.Status,
+                Origin = trip.Origin!,
+                Destination = trip.Destination!,
+                CreationDate = trip.CreationDate,
+                LastUpdateDate = trip.LastUpdateDate,
+                Stats = trip.Stats,
+                Driver = users.SingleOrDefault(u => u.Id == trip.DriverId),
+                CreatedBy = users.SingleOrDefault(u => u.Id == trip.CreatedById),
+                UpdatedBy = users.SingleOrDefault(u => u.Id == trip.UpdatedById),
+                Vehicle = await _context.Vehicles
+                    .SingleOrDefaultAsync(v => v.Id == trip.VehicleId),
+                PlannedStops = trip.PlannedStops?
+                    .Select(p => (TripPlannedStopDto)p!)
+                    .ToList() ?? []
+            };
+
+            return ApiSuccess(result);
+        }
+        catch (FormatException ex)
+        {
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (Exception ex)
         {

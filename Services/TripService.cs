@@ -100,6 +100,26 @@ public class TripService
             .ToListAsync();
     }
 
+    public async Task<Trip?> GetPendingAsync(int driverId)
+    {
+        var builder = Builders<Trip>.Filter;
+        var filter = builder.And(
+            builder.Eq(x => x.DriverId, driverId),
+            builder.In(x => x.Status,
+            [
+                TripStatus.Planned,
+                TripStatus.Delayed,
+                TripStatus.OnRoute,
+                TripStatus.AtBase,
+                TripStatus.Stopped
+            ])
+        );
+
+        return await _collection.Find(filter)
+            .SortBy(x => x.CreationDate)
+            .FirstOrDefaultAsync();
+    }
+
     /// <summary>
     /// Actualiza la información de un viaje.
     /// </summary>
