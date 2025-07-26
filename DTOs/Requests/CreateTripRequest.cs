@@ -29,6 +29,6 @@ public class CreateTripRequest
     /// <summary>
     /// Lista de paradas planeadas durante el viaje.
     /// </summary>
-    [Range(0, Constants.MaxTripPlannedStopCount)]
+    [MaxLength(Constants.MaxTripPlannedStopCount)]
     public IList<TripLocationDto>? PlannedStops { get; set; }
 }

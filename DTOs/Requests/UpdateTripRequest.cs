@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.Models.Enums;
 
@@ -33,5 +35,6 @@ public class UpdateTripRequest
     /// <summary>
     /// Lista de paradas planeadas durante el viaje.
     /// </summary>
+    [MaxLength(Constants.MaxTripPlannedStopCount)]
     public IList<TripLocationDto>? PlannedStops { get; set; }
 }
