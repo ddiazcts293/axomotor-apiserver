@@ -150,21 +150,21 @@ public class TripService
         var update = Builders<Trip>.Update.CurrentDate(x => x.LastUpdateDate);
 
         if (driverId is not null)
-            update.Set(x => x.DriverId, driverId);
+            update = update.Set(x => x.DriverId, driverId);
         if (vehicleId is not null)
-            update.Set(x => x.VehicleId, vehicleId);
+            update = update.Set(x => x.VehicleId, vehicleId);
         if (status is not null)
-            update.Set(x => x.Status, status);
+            update = update.Set(x => x.Status, status.Value);
         if (origin is not null)
-            update.Set(x => x.Origin, origin);
+            update = update.Set(x => x.Origin, origin);
         if (destination is not null)
-            update.Set(x => x.Destination, destination);
+            update = update.Set(x => x.Destination, destination);
         if (plannedStops is not null)
-            update.Set(x => x.PlannedStops, plannedStops);
+            update = update.Set(x => x.PlannedStops, plannedStops);
         if (stats is not null)
-            update.Set(x => x.Stats, stats);
+            update = update.Set(x => x.Stats, stats);
         if (updatedById is not null)
-            update.Set(x => x.UpdatedById, updatedById);
+            update = update.Set(x => x.UpdatedById, updatedById);
 
         var result = await _collection.UpdateOneAsync(filter, update);
         return result.IsAcknowledged && result.ModifiedCount > 0;
