@@ -156,12 +156,13 @@ public class TripsController
     {
         try
         {
-            // obtiene la lista de usuarios en mysql
-            var users = await _context.UserAccounts.ToListAsync();
             // obtiene el viaje asociado
             var trip = await _tripService.GetAsync(tripId);
             if (trip is null)
                 return ApiError(ApiResultCode.NotFound);
+
+            // obtiene la lista de usuarios en mysql
+            var users = await _context.UserAccounts.ToListAsync();
 
             var result = new TripDto
             {
@@ -291,6 +292,7 @@ public class TripsController
         }
     }
 
+    [Obsolete("Positions will be recorded using MQTT")]
     [HttpPost("{tripId}/positions")]
     public async Task<IActionResult> PostPosition(string tripId, TripPositionDto position)
     {

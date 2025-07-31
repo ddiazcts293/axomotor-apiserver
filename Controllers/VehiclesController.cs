@@ -203,10 +203,13 @@ public class VehiclesController(
         return ApiError(ApiResultCode.NotImplemented);
     }
 
-    [HttpGet("{vehicleid}/events")]
+    [HttpGet("{vehicleId}/events")]
     [ProducesResponseType<GenericResponse<ResultCollection<DeviceEventDto>>>(200)]
     public async Task<IActionResult> GetEvents(
-        int vehicleid,
+        int vehicleId,
+        DeviceEventCode? code,
+        DeviceEventType? type,
+        DeviceEventSeverity? severity,
         DateTimeOffset? periodStart,
         DateTimeOffset? periodEnd,
         int skip = 0,
@@ -215,9 +218,18 @@ public class VehiclesController(
     {
         try
         {
-            var list = await _deviceEventService.GetAsync(vehicleid, skip, limit);
-            if (list is null)
+            bool vehicleExists = await _context.Vehicles.AnyAsync(x => x.Id == vehicleId);
+            if (!vehicleExists)
                 return ApiError(ApiResultCode.Failed, "Vehicle does not exist");
+
+            var list = await _deviceEventService.GetAsync(
+                vehicleId,
+                skip,
+                limit,
+                code,
+                type,
+                severity
+            );
 
             return ApiSuccessCollection(list.Select(x => (DeviceEventDto)x!));
         }

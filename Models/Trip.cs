@@ -1,3 +1,4 @@
+using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -84,10 +85,7 @@ public class Trip
     #region BSON Ignore
 
     [BsonIgnore]
-    public bool IsFinished => Status is
-        TripStatus.Cancelled or
-        TripStatus.Finished or
-        TripStatus.Aborted;
+    public bool IsFinished => Status.IsFinished();
 
     #endregion
 }

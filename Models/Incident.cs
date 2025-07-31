@@ -30,7 +30,7 @@ public class Incident
     /// <summary>
     /// Razón de la incidencia.
     /// </summary>
-    public required string Code { get; set; }
+    public IncidentCode Code { get; set; }
 
     /// <summary>
     /// Tipo de incidencia.

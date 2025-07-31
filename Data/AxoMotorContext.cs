@@ -24,7 +24,7 @@ public class AxoMotorContext(DbContextOptions options) : DbContext(options)
         modelBuilder.Entity<DeviceEventInfo>(entity =>
         {
             entity.ToTable("DeviceEventCatalog").HasKey(x => x.Code);
-            entity.Property(x => x.Code).HasMaxLength(24);
+            entity.Property(x => x.Code).HasConversion<string>().HasMaxLength(24);
             entity.Property(x => x.DisplayName).HasMaxLength(32);
             entity.Property(x => x.Description).HasMaxLength(64);
             entity.Property(x => x.Type).HasConversion<string>();
@@ -34,7 +34,7 @@ public class AxoMotorContext(DbContextOptions options) : DbContext(options)
         modelBuilder.Entity<IncidentInfo>(entity =>
         {
             entity.ToTable("IncidentCatalog").HasKey(x => x.Code);
-            entity.Property(x => x.Code).HasMaxLength(24);
+            entity.Property(x => x.Code).HasConversion<string>().HasMaxLength(24);
             entity.Property(x => x.DisplayName).HasMaxLength(32);
             entity.Property(x => x.Description).HasMaxLength(64);
             entity.Property(x => x.Priority).HasConversion<string>();

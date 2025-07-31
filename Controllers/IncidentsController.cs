@@ -4,6 +4,7 @@ using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.DTOs.Responses;
+using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Models.Enums;
 using AxoMotor.ApiServer.Services;
@@ -33,25 +34,23 @@ public class IncidentsController
     {
         try
         {
-            // obtiene el código de incidencia es válido
-            var info = await _context.IncidentCatalog.SingleOrDefaultAsync(
-                x => x.Code == request.Code);
-            if (info is null)
-                return ApiError(ApiResultCode.InvalidArgs, "Invalid incident code");
-
-            // verifica si el viaje existe
-            var trip = await _tripService.GetAsync(request.TripId);
-            if (trip is null)
+            // obtiene la información del tipo de incidente
+            var info = await _context.IncidentCatalog
+                .SingleAsync(x => x.Code == request.Code);
+                
+            // Obtiene el estado del viaje
+            var tripStatus = await _tripService.GetStatus(request.TripId);
+            if (tripStatus is null)
                 return ApiError(ApiResultCode.NotFound, "The trip does not exist");
 
             // verifica si el viaje fue finalizado
-            if (trip.IsFinished)
+            if (tripStatus.Value.IsFinished())
                 return ApiError(ApiResultCode.InvalidState, "Trip was finished");
 
             Incident incident = new()
             {
                 // TODO: obtener identificador de usuario que realiza la acción
-                RegisteredById = trip.DriverId,
+                RegisteredById = 1,
                 Code = request.Code,
                 TripId = request.TripId,
                 Priority = info.Priority,
@@ -86,7 +85,7 @@ public class IncidentsController
     [HttpGet]
     [ProducesResponseType<GenericResponse<ResultCollection<IncidentDto>>>(200)]
     public async Task<IActionResult> Get(
-        string? incidentCode,
+        IncidentCode? code,
         IncidentType? type,
         IncidentStatus? status,
         IncidentPriority? priority,
@@ -97,21 +96,11 @@ public class IncidentsController
     {
         try
         {
-            if (incidentCode is not null)
-            {
-                bool isValidCode = await _context.IncidentCatalog.AnyAsync(
-                    x => x.Code == incidentCode);
-
-                if (!isValidCode) return ApiError(
-                    ApiResultCode.InvalidArgs, "Invalid incident code"
-                );
-            }
-
             // obtiene la lista de usuarios en mysql
             var users = await _context.UserAccounts.ToListAsync();
             // obtiene la lista de incidentes en mongodb
             var incidents = await _incidentService.GetAsync(
-                incidentCode,
+                code,
                 type,
                 status,
                 priority,
@@ -158,14 +147,13 @@ public class IncidentsController
     {
         try
         {
-            // obtiene la lista de usuarios en mysql
-            var users = await _context.UserAccounts.ToListAsync();
             // obtiene el incidente asociado
             var incident = await _incidentService.GetAsync(incidentId);
             if (incident is null)
-            {
                 return ApiError(ApiResultCode.NotFound);
-            }
+
+            // obtiene la lista de usuarios en mysql
+            var users = await _context.UserAccounts.ToListAsync();
 
             var result = new IncidentDto
             {

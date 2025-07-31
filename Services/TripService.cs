@@ -1,9 +1,7 @@
 using AxoMotor.ApiServer.Config;
-using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Models.Enums;
 using Microsoft.Extensions.Options;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 
@@ -27,6 +25,32 @@ public class TripService
         _collection = database.GetCollection<Trip>(
             settings.Value.Collections.Trips
         );
+    }
+
+    /// <summary>
+    /// Verifica si un viaje con el identificador dado existe.
+    /// </summary>
+    /// <param name="tripId"></param>
+    /// <returns></returns>
+    public async Task<bool> Exists(string tripId) =>
+        await _collection.Find(x => x.Id == tripId).AnyAsync();
+
+    /// <summary>
+    /// Obtiene el estado de un viaje.
+    /// </summary>
+    /// <param name="tripId"></param>
+    /// <returns></returns>
+    public async Task<TripStatus?> GetStatus(string tripId)
+    {
+        var builder = Builders<Trip>.Filter;
+        var projection = new ProjectionDefinitionBuilder<Trip>()
+            .Include(x => x.Status);
+
+        var trip = await _collection.Find(x => x.Id == tripId)
+            .Project<Trip>(projection)
+            .FirstOrDefaultAsync();
+
+        return trip?.Status;
     }
 
     /// <summary>
@@ -96,6 +120,7 @@ public class TripService
 
         return await _collection
             .Find(builder.And(filters))
+            .SortByDescending(x => x.CreationDate)
             .Project<Trip>(projection)
             .ToListAsync();
     }
