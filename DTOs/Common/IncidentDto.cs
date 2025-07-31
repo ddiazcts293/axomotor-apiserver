@@ -24,7 +24,7 @@ public class IncidentDto
     /// <summary>
     /// Razón de la incidencia.
     /// </summary>
-    public required string Code { get; set; }
+    public required IncidentCode Code { get; set; }
 
     /// <summary>
     /// Tipo de incidencia.

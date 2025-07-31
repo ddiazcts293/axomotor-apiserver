@@ -8,7 +8,7 @@ public class DeviceEventDto
     /// <summary>
     /// Código del evento.
     /// </summary>
-    public required string Code { get; set; }
+    public required DeviceEventCode Code { get; set; }
 
     /// <summary>
     /// Tipo de evento.

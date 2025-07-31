@@ -1,16 +1,13 @@
 using AxoMotor.ApiServer.Config;
-using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Models.Enums;
 using Microsoft.Extensions.Options;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace AxoMotor.ApiServer.Services;
 
 public class IncidentService
 {
-    private readonly MongoDBCollections _dbCollectionNames;
     private readonly IMongoCollection<Incident> _collection;
 
     public IncidentService(IOptions<MongoDBSettings> settings)
@@ -21,8 +18,6 @@ public class IncidentService
         _collection = database.GetCollection<Incident>(
             settings.Value.Collections.Incidents
         );
-
-        _dbCollectionNames = settings.Value.Collections;
     }
 
     public async Task CreateAsync(Incident incident)
@@ -36,7 +31,7 @@ public class IncidentService
             .SingleOrDefaultAsync();
 
     public async Task<IList<Incident>> GetAsync(
-        string? code = null,
+        IncidentCode? code = null,
         IncidentType? type = null,
         IncidentStatus? status = null,
         IncidentPriority? priority = null,
@@ -51,19 +46,19 @@ public class IncidentService
 
         List<FilterDefinition<Incident>> filters = [];
 
-        if (!string.IsNullOrWhiteSpace(code))
+        if (code.HasValue)
             filters.Add(builder.Eq(x => x.Code, code));
-        if (type is not null)
+        if (type.HasValue && !code.HasValue)
             filters.Add(builder.Eq(x => x.Type, type));
-        if (status is not null)
+        if (status.HasValue)
             filters.Add(builder.Eq(x => x.Status, status));
-        if (priority is not null)
+        if (priority.HasValue)
             filters.Add(builder.Eq(x => x.Priority, priority));
-        if (registeredById is not null)
+        if (registeredById.HasValue)
             filters.Add(builder.Eq(x => x.RegisteredById, registeredById));
-        if (revisedById is not null)
+        if (revisedById.HasValue)
             filters.Add(builder.Eq(x => x.RevisedById, revisedById));
-        if (closedById is not null)
+        if (closedById.HasValue)
             filters.Add(builder.Eq(x => x.ClosedById, closedById));
 
         if (filters.Count == 0)
@@ -71,6 +66,7 @@ public class IncidentService
 
         return await _collection
             .Find(builder.And(filters))
+            .SortByDescending(x => x.RegistrationDate)
             .Project<Incident>(projection)
             .ToListAsync();
     }

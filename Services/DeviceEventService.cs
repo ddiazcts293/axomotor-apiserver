@@ -1,7 +1,7 @@
 using AxoMotor.ApiServer.Config;
 using AxoMotor.ApiServer.Models;
+using AxoMotor.ApiServer.Models.Enums;
 using Microsoft.Extensions.Options;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace AxoMotor.ApiServer.Services;
@@ -37,9 +37,29 @@ public class DeviceEventService
     public async Task<IList<DeviceEvent>> GetAsync(
         int vehicleId,
         int skip,
-        int limit
-    ) => await _collection.Find(x => x.VehicleId == vehicleId)
-        .Skip(skip)
-        .Limit(limit)
-        .ToListAsync();
+        int limit,
+        DeviceEventCode? code = null,
+        DeviceEventType? type = null,
+        DeviceEventSeverity? severity = null
+    )
+    {
+        var builder = Builders<DeviceEvent>.Filter;
+        List<FilterDefinition<DeviceEvent>> filters = [];
+
+        filters.Add(builder.Eq(x => x.VehicleId, vehicleId));
+        
+        if (code.HasValue)
+            filters.Add(builder.Eq(x => x.Code, code));
+        if (type.HasValue && !code.HasValue)
+            filters.Add(builder.Eq(x => x.Type, type));
+        if (severity.HasValue && !code.HasValue)
+            filters.Add(builder.Eq(x => x.Severity, severity));
+
+        return await _collection
+            .Find(builder.And(filters))
+            .SortByDescending(x => x.Timestamp)
+            .Skip(skip)
+            .Limit(limit)
+            .ToListAsync();
+    }
 }
