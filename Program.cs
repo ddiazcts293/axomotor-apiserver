@@ -29,6 +29,8 @@ builder.Services.AddControllers()
 // Establece la configuración de MongoDB
 builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection("MongoDB"));
 ConfigureMySQL(builder.Services, builder.Configuration.GetSection("MySQL"));
+// Agrega el servicio de AxoMotor
+ConfigureAxoMotorService(builder.Services, builder.Configuration.GetSection("MQTT"));
 
 // Agrega los servicios para manejar colecciones en MongoDB
 builder.Services.AddSingleton<TripService>();
@@ -63,4 +65,13 @@ static void ConfigureMySQL(IServiceCollection services, IConfigurationSection co
     services.AddDbContextPool<AxoMotorContext>(options =>
         options.UseMySql(connectionString, version)
     );
+}
+
+static void ConfigureAxoMotorService(IServiceCollection services, IConfigurationSection config)
+{
+    if (config.GetValue<bool>("Enable"))
+    {
+        services.Configure<MqttSettings>(config);
+        services.AddHostedService<AxoMotorService>();
+    }
 }
