@@ -39,8 +39,8 @@ public class PositionService
         int skip,
         int limit
     ) => await _collection.Find(x => x.TripId == tripId)
+        .SortByDescending(x => x.Timestamp)
         .Skip(skip)
         .Limit(limit)
         .ToListAsync();
-
 }

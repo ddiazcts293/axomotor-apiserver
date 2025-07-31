@@ -13,6 +13,14 @@
     "ConnectionString": "SQL_CONNECTION_STRING",
     "ServerVersion": "SQL_VERSION"
   },
+    "MQTT": {
+    "Enable": false,
+    "Host": null,
+    "Port": null,
+    "User": null,
+    "Password": null,
+    "ClientId": null
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
