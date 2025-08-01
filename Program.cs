@@ -17,6 +17,17 @@ ConventionRegistry.Register("CamelCaseConvention",
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 💡 Agrega CORS con política abierta para desarrollo
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // Add services to the container.
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -26,23 +37,21 @@ builder.Services.AddControllers()
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     });
 
-// Establece la configuración de MongoDB
+// Configuración de base de datos
 builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection("MongoDB"));
 ConfigureMySQL(builder.Services, builder.Configuration.GetSection("MySQL"));
 
-// Agrega los servicios para manejar colecciones en MongoDB
 builder.Services.AddSingleton<TripService>();
 builder.Services.AddSingleton<IncidentService>();
 builder.Services.AddSingleton<PositionService>();
 builder.Services.AddSingleton<DeviceEventService>();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -50,8 +59,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
+
+// ✅ Usa la política CORS antes de Authorization
+app.UseCors("AllowAll");
+
 app.UseAuthorization();
+
 app.MapControllers();
 app.Run();
 
