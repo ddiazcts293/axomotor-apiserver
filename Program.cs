@@ -17,7 +17,7 @@ ConventionRegistry.Register("CamelCaseConvention",
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 💡 Agrega CORS con política abierta para desarrollo
+// Agrega CORS con política abierta para desarrollo
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -63,11 +63,9 @@ if (app.Environment.IsDevelopment())
 
 // app.UseHttpsRedirection();
 
-// ✅ Usa la política CORS antes de Authorization
+// Usa la política CORS antes de Authorization
 app.UseCors("AllowAll");
-
 app.UseAuthorization();
-
 app.MapControllers();
 app.Run();
 
