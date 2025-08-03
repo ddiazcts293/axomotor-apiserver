@@ -63,7 +63,8 @@ public partial class AxoMotorService : BackgroundService
 
         var mqttClientOptions = mqttClientOptionsBuilder.Build();
         var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder()
-            .WithTopicFilter("trip/+/event")
+            .WithTopicFilter("device/+/event")
+            .WithTopicFilter("device/+/ping/pong")
             .WithTopicFilter("trip/+/position")
             .WithTopicFilter("trip/+/stats")
             .Build();
@@ -96,9 +97,9 @@ public partial class AxoMotorService : BackgroundService
         {
             string payload = e.ApplicationMessage.ConvertPayloadToString();
 
-            if (topic.StartsWith("trip/"))
+            if (topic.StartsWith("device/"))
             {
-                string tripId = GetTripIdFromTopic(e.ApplicationMessage.Topic);
+                int vehicleId = GetDeviceIdFromTopic(e.ApplicationMessage.Topic);
 
                 if (topic.EndsWith("/event"))
                 {
@@ -106,22 +107,21 @@ public partial class AxoMotorService : BackgroundService
                     var message = JsonSerializer.Deserialize<RegisterDeviceEventMessage>(
                         payload, _jsonOptions);
 
-                    // verifica que no haya dado null
                     AxomotorMqttReceiverException.ThrowIfNull(message);
-                    message!.TripId = tripId;
-
-                    await RegisterEvent(message);
+                    message!.VehicleId = vehicleId;
+                    await RegisterEvent(message!);
                 }
-                else if (topic.EndsWith("/position"))
+            } else if (topic.StartsWith("trip/")) {
+                string tripId = GetTripIdFromTopic(e.ApplicationMessage.Topic);
+
+                if (topic.EndsWith("/position"))
                 {
                     // deserializa el JSON
                     var message = JsonSerializer.Deserialize<RegisterTripPositionMessage>(
                         payload, _jsonOptions);
 
-                    // verifica que no sea null
                     AxomotorMqttReceiverException.ThrowIfNull(message);
                     message!.TripId = tripId;
-
                     await RegisterPosition(message);
                 }
                 else if (topic.EndsWith("/stats"))
@@ -192,6 +192,18 @@ public partial class AxoMotorService : BackgroundService
         throw new AxomotorMqttReceiverException("Invalid trip identifier");
     }
 
+    private static int GetDeviceIdFromTopic(string topic)
+    {
+        Match match = TopicTripIdRegex().Match(topic);
+        if (match.Success)
+            return int.Parse(match.Groups[1].Value);
+
+        throw new AxomotorMqttReceiverException("Invalid device identifier");
+    }
+
     [GeneratedRegex(@"(?:^trip/)([\da-fA-F]+)(?:/\w+)")]
     private static partial Regex TopicTripIdRegex();
+
+    [GeneratedRegex(@"(?:^device/)(\d+)(?:/\w+)")]
+    private static partial Regex TopicDeviceIdRegex();
 }

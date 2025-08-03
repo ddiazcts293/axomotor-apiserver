@@ -9,11 +9,7 @@ namespace AxoMotor.ApiServer.DTOs.Mqtt;
 public class RegisterDeviceEventMessage : IMqttIncomingMessage<DeviceEvent>
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [ValidateObjectId]
-    [Required(AllowEmptyStrings = false)]
-    public string TripId { get; set; } = null!;
-
-    public required int VehicleId { get; set; }
+    public int VehicleId { get; set; }
 
     public required DeviceEventCode Code { get; set; }
 
