@@ -4,6 +4,7 @@ using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Common;
 using AxoMotor.ApiServer.DTOs.Requests;
 using AxoMotor.ApiServer.DTOs.Responses;
+using AxoMotor.ApiServer.Exceptions;
 using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Models.Enums;
@@ -35,9 +36,9 @@ public class IncidentsController
         try
         {
             // obtiene la información del tipo de incidente
-            var info = await _context.IncidentCatalog
-                .SingleAsync(x => x.Code == request.Code);
-                
+            var info = await _context.IncidentCatalog.FindAsync(request.Code) ??
+                throw new AxomotorApiException("Invalid incident code");
+
             // Obtiene el estado del viaje
             var tripStatus = await _tripService.GetStatus(request.TripId);
             if (tripStatus is null)
@@ -71,6 +72,10 @@ public class IncidentsController
             };
 
             return ApiSuccess(response);
+        }
+        catch (AxomotorApiException ex)
+        {
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
         }
         catch (FormatException ex)
         {

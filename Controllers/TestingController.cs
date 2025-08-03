@@ -2,6 +2,7 @@ using AxoMotor.ApiServer.ApiModels;
 using AxoMotor.ApiServer.ApiModels.Enums;
 using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.DTOs.Requests;
+using AxoMotor.ApiServer.Exceptions;
 using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models;
 using AxoMotor.ApiServer.Services;
@@ -35,7 +36,8 @@ public class TestingController
             // obtiene el vehículo
             var vehicle = await _context.Vehicles.FindAsync(vehicleId);
             // verifica si el código es de un evento de dispositivo válido
-            var eventInfo = await _context.DeviceEventCatalog.FindAsync(request.Code);
+            var eventInfo = await _context.DeviceEventCatalog.FindAsync(request.Code) ??
+                throw new AxomotorApiException("Invalid event code");
 
             // verifica si el vehículo no existe
             if (vehicle is null)
@@ -56,6 +58,10 @@ public class TestingController
 
             await _deviceEventService.PushOneAsync(deviceEvent);
             return Ok(Responses.MinimalResponse(ApiResultCode.Success));
+        }
+        catch (AxomotorApiException)
+        {
+            return Ok(Responses.MinimalResponse(ApiResultCode.InvalidArgs));
         }
         catch (FormatException)
         {
