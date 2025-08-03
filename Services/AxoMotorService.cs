@@ -194,7 +194,7 @@ public partial class AxoMotorService : BackgroundService
 
     private static int GetDeviceIdFromTopic(string topic)
     {
-        Match match = TopicTripIdRegex().Match(topic);
+        Match match = TopicDeviceIdRegex().Match(topic);
         if (match.Success)
             return int.Parse(match.Groups[1].Value);
 
