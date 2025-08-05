@@ -37,6 +37,8 @@ builder.Services.AddControllers()
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     });
 
+// Configuración general
+builder.Services.Configure<AxoMotorSettings>(builder.Configuration.GetSection("AxoMotor"));
 // Configuración de base de datos
 builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection("MongoDB"));
 ConfigureMySQL(builder.Services, builder.Configuration.GetSection("MySQL"));
@@ -47,6 +49,7 @@ builder.Services.AddSingleton<TripService>();
 builder.Services.AddSingleton<IncidentService>();
 builder.Services.AddSingleton<PositionService>();
 builder.Services.AddSingleton<DeviceEventService>();
+builder.Services.AddScoped<KpiService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

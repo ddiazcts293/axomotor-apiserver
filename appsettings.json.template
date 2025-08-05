@@ -21,6 +21,9 @@
     "Password": null,
     "ClientId": null
   },
+  "AxoMotor": {
+    "KpiUpdateInterval": 10
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",

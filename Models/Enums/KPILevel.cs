@@ -2,9 +2,10 @@ namespace AxoMotor.ApiServer.Models.Enums;
 
 public enum KPILevel
 {
+    NotData,
     Optimal,
-    Low,
+    Good,
     Acceptable,
-    High,
+    Bad,
     Critical
 }

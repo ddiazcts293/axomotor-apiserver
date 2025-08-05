@@ -6,13 +6,15 @@ public class KPI : ModelBase
 {
     public required KPIType Type { get; set; }
 
-    public decimal OptimalValue { get; set; }
+    public double OptimalValue { get; set; }
 
-    public decimal? LowValue { get; set; }
+    public double? GoodValue { get; set; }
 
-    public decimal AcceptableValue { get; set; }
+    public double AcceptableValue { get; set; }
 
-    public decimal? HighValue { get; set; }
+    public double? BadValue { get; set; }
 
-    public decimal CriticalValue { get; set; }
+    public double CriticalValue { get; set; }
+
+    public bool Inverted { get; set; }
 }

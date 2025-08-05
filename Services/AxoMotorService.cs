@@ -16,17 +16,20 @@ public partial class AxoMotorService : BackgroundService
     private readonly IServiceProvider _services;
     private readonly ILogger<AxoMotorService> _logger;
     private readonly MqttSettings _mqttSettings;
+    private readonly AxoMotorSettings _axomotorSettings;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public AxoMotorService(
         IServiceProvider services,
         ILogger<AxoMotorService> logger,
-        IOptions<MqttSettings> settings
+        IOptions<MqttSettings> mqttOptions,
+        IOptions<AxoMotorSettings> axomotorOptions
     )
     {
         _services = services;
         _logger = logger;
-        _mqttSettings = settings.Value;
+        _mqttSettings = mqttOptions.Value;
+        _axomotorSettings = axomotorOptions.Value;
         _jsonOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -36,6 +39,9 @@ public partial class AxoMotorService : BackgroundService
                 ),
                 new JsonStringEnumConverter<DeviceEventCode>(
                     JsonNamingPolicy.CamelCase
+                ),
+                new JsonStringEnumConverter<KPILevel>(
+                    JsonNamingPolicy.CamelCase
                 )
             }
         };
@@ -43,6 +49,7 @@ public partial class AxoMotorService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // crea y configura un cliente MQTT
         var mqttFactory = new MqttClientFactory();
         using var mqttClient = mqttFactory.CreateMqttClient();
         var mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
@@ -61,6 +68,8 @@ public partial class AxoMotorService : BackgroundService
             );
         }
 
+        // establece las suscripciones de MQTT donde los dispositivos publican
+        // mensajes
         var mqttClientOptions = mqttClientOptionsBuilder.Build();
         var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder()
             .WithTopicFilter("device/+/event")
@@ -74,10 +83,31 @@ public partial class AxoMotorService : BackgroundService
         await mqttClient.ConnectAsync(mqttClientOptions, stoppingToken);
         await mqttClient.SubscribeAsync(mqttSubscribeOptions, stoppingToken);
 
+        TimeSpan interval = TimeSpan.FromSeconds(_axomotorSettings.KpiUpdateInterval);
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            await Task.Delay(1000, stoppingToken);
+            await PublishKpiValues(mqttClient, stoppingToken);
+            await Task.Delay(interval, stoppingToken);
         }
+    }
+
+    private async Task PublishKpiValues(IMqttClient client, CancellationToken cancellationToken)
+    {
+        using var scope = _services.CreateAsyncScope();
+        var kpiService = scope.ServiceProvider.GetRequiredService<KpiService>();
+        var kpiValueSet = await kpiService.GetKpiValues(cancellationToken);
+
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(kpiValueSet, _jsonOptions);
+
+        var message = new MqttApplicationMessageBuilder()
+            .WithTopic("dashboard")
+            .WithPayload(payload)
+            .WithRetainFlag(true)
+            .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtMostOnce)
+            .Build();
+
+        await client.PublishAsync(message, cancellationToken);
     }
 
     private async Task OnMessageReceived(MqttApplicationMessageReceivedEventArgs e)
@@ -85,7 +115,7 @@ public partial class AxoMotorService : BackgroundService
         string clientId = e.ClientId;
         string topic = e.ApplicationMessage.Topic;
         long length = e.ApplicationMessage.Payload.Length;
-        
+
         _logger.LogInformation(
             "Message published on {topic} by {clientId} ({length} bytes)",
             topic,
@@ -111,7 +141,9 @@ public partial class AxoMotorService : BackgroundService
                     message!.VehicleId = vehicleId;
                     await RegisterEvent(message!);
                 }
-            } else if (topic.StartsWith("trip/")) {
+            }
+            else if (topic.StartsWith("trip/"))
+            {
                 string tripId = GetTripIdFromTopic(e.ApplicationMessage.Topic);
 
                 if (topic.EndsWith("/position"))

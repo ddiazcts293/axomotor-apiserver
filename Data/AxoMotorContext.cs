@@ -54,8 +54,9 @@ public class AxoMotorContext(DbContextOptions options) : DbContext(options)
         modelBuilder.Entity<KPI>(entity =>
         {
             entity.ToTable("KpiCatalog").HasKey(x => x.Code);
+            entity.Property(x => x.Code).HasMaxLength(32);
             entity.Property(x => x.Type).HasConversion<string>();
-            entity.Property(x => x.DisplayName).HasMaxLength(32);
+            entity.Property(x => x.DisplayName).HasMaxLength(64);
         });
 
         modelBuilder.Entity<VehicleClass>(entity =>

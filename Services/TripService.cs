@@ -9,7 +9,6 @@ namespace AxoMotor.ApiServer.Services;
 
 public class TripService
 {
-    private readonly MongoDBCollections _dbCollectionNames;
     private readonly IMongoCollection<Trip> _collection;
 
     /// <summary>
@@ -18,7 +17,6 @@ public class TripService
     /// <param name="settings">Configuración de MongoDB.</param>
     public TripService(IOptions<MongoDBSettings> settings)
     {
-        _dbCollectionNames = settings.Value.Collections;
         MongoClient client = new(settings.Value.ConnectionUri);
         IMongoDatabase database = client.GetDatabase(settings.Value.DatabaseName);
 
