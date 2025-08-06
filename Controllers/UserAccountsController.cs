@@ -10,6 +10,7 @@ using AxoMotor.ApiServer.Models.Enums;
 using AxoMotor.ApiServer.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Supabase.Gotrue.Exceptions;
 
 namespace AxoMotor.ApiServer.Controllers;
 
@@ -17,7 +18,7 @@ namespace AxoMotor.ApiServer.Controllers;
 [ProducesResponseType<BasicResponse>(200)]
 [ProducesResponseType<ErrorResponse>(400)]
 [ProducesResponseType<ErrorResponse>(500)]
-public class UserAccountsController(AxoMotorContext context) : ApiControllerBase
+public class UserAccountsController(AxoMotorContext context, Supabase.Client client) : ApiControllerBase
 {
     /*
         TODO: agregar autenticación
@@ -27,6 +28,7 @@ public class UserAccountsController(AxoMotorContext context) : ApiControllerBase
     */
 
     private readonly AxoMotorContext _context = context;
+    private readonly Supabase.Client _client = client;
 
     [HttpGet("me")]
     [ProducesResponseType<GenericResponse<UserAccount>>(200)]
@@ -53,6 +55,22 @@ public class UserAccountsController(AxoMotorContext context) : ApiControllerBase
 
             await _context.UserAccounts.AddAsync(account);
             await _context.SaveChangesAsync();
+
+            try
+            {
+                string email = request.Email;
+                string phone = request.PhoneNumber;
+                string phoneLastDigits = phone.Substring(phone.Length - 4);
+                string password = $"{request.Role}_{phoneLastDigits}";
+                await _client.Auth.SignUp(request.Email, password);
+            }
+            catch (GotrueException ex)
+            {
+                // borra el usuario recientemente creado de la base de datos
+                _context.UserAccounts.Remove(account);
+                await _context.SaveChangesAsync();
+                return ApiError(ApiResultCode.Failed, ex.Reason.ToString());
+            }
 
             var response = new RegisterUserAccountResponse()
             {
@@ -186,7 +204,25 @@ public class UserAccountsController(AxoMotorContext context) : ApiControllerBase
     [HttpPut("{userId}/resetPassword")]
     public async Task<IActionResult> ResetPassword(string userId)
     {
-        // TODO: agregar restablecimiento de contraseña
-        return ApiError(ApiResultCode.NotImplemented);
+        try
+        {
+            var userAccount = await _context.UserAccounts.FindAsync(userId);
+            if (userAccount is null)
+                return ApiError(ApiResultCode.NotFound);
+
+            string email = userAccount.Email;
+            if (await _client.Auth.ResetPasswordForEmail(email))
+            {
+                return ApiSuccess();
+            }
+            else
+            {
+                return ApiError(ApiResultCode.Failed, "Auth provider error");
+            }
+        }
+        catch (Exception ex)
+        {
+            return ApiServerError(ex);
+        }
     }
 }

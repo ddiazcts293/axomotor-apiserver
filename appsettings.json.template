@@ -24,6 +24,10 @@
   "AxoMotor": {
     "KpiUpdateInterval": 10
   },
+  "Supabase": {
+    "Url": "",
+    "Key": ""
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",

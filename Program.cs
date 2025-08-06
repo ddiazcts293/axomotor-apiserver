@@ -44,6 +44,8 @@ builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection("Mo
 ConfigureMySQL(builder.Services, builder.Configuration.GetSection("MySQL"));
 // Agrega el servicio de AxoMotor
 ConfigureAxoMotorService(builder.Services, builder.Configuration.GetSection("MQTT"));
+// Agrega el servicio de Supabase
+await ConfigureSupabaseAsync(builder.Services, builder.Configuration.GetSection("Supabase"));
 
 builder.Services.AddSingleton<TripService>();
 builder.Services.AddSingleton<IncidentService>();
@@ -89,4 +91,14 @@ static void ConfigureAxoMotorService(IServiceCollection services, IConfiguration
         services.Configure<MqttSettings>(config);
         services.AddHostedService<AxoMotorService>();
     }
+}
+
+static async Task ConfigureSupabaseAsync(IServiceCollection services, IConfigurationSection config)
+{
+    string url = config["Url"] ?? throw new Exception("Supabase URL is not set");
+    string key = config["Key"] ?? throw new Exception("Supabase Api key is not set");
+
+    var client = new Supabase.Client(url, key);
+    await client.InitializeAsync();
+    services.AddSingleton(client);
 }
