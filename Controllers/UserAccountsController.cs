@@ -8,6 +8,7 @@ using AxoMotor.ApiServer.Helpers;
 using AxoMotor.ApiServer.Models.Catalog;
 using AxoMotor.ApiServer.Models.Enums;
 using AxoMotor.ApiServer.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Supabase.Gotrue.Exceptions;
@@ -30,12 +31,31 @@ public class UserAccountsController(AxoMotorContext context, Supabase.Client cli
     private readonly AxoMotorContext _context = context;
     private readonly Supabase.Client _client = client;
 
+    [Authorize]
     [HttpGet("me")]
     [ProducesResponseType<GenericResponse<UserAccount>>(200)]
     public async Task<IActionResult> GetMe()
     {
-        // TODO: agregar endpoint para obtener información del mismo usuario
-        return Ok(Responses.ErrorResponse(ApiResultCode.NotImplemented));
+        string email = User.FindFirst("email")?.Value ?? string.Empty;
+        
+        try
+        {
+            var userAccount = await _context.UserAccounts.
+                FirstOrDefaultAsync(x => x.Email == email);
+
+            if (userAccount is null)
+                return ApiError(ApiResultCode.NotFound);
+
+            return ApiSuccess(userAccount);
+        }
+        catch (FormatException ex)
+        {
+            return ApiError(ApiResultCode.InvalidArgs, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return ApiServerError(ex);
+        }
     }
 
     [HttpPost]

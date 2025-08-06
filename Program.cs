@@ -1,9 +1,12 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AxoMotor.ApiServer.Config;
 using AxoMotor.ApiServer.Data;
 using AxoMotor.ApiServer.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Conventions;
 using Scalar.AspNetCore;
@@ -36,6 +39,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     });
+
 
 // Configuración general
 builder.Services.Configure<AxoMotorSettings>(builder.Configuration.GetSection("AxoMotor"));
@@ -70,6 +74,7 @@ if (app.Environment.IsDevelopment())
 
 // Usa la política CORS antes de Authorization
 app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
@@ -97,6 +102,27 @@ static async Task ConfigureSupabaseAsync(IServiceCollection services, IConfigura
 {
     string url = config["Url"] ?? throw new Exception("Supabase URL is not set");
     string key = config["Key"] ?? throw new Exception("Supabase Api key is not set");
+    string jwtSecret = config["JwtSecret"] ?? throw new Exception("Supabase JwtSecret is not set");
+
+    services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = url + "/auth/v1", // <--- reemplaza esto
+            ValidateAudience = false, // Supabase no usa audiencia por defecto
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        };
+    });
+
+    services.AddAuthorization();
 
     var client = new Supabase.Client(url, key);
     await client.InitializeAsync();

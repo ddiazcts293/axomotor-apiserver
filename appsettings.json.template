@@ -26,7 +26,8 @@
   },
   "Supabase": {
     "Url": "",
-    "Key": ""
+    "Key": "",
+    "JwtSecret": ""
   },
   "Logging": {
     "LogLevel": {
