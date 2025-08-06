@@ -83,6 +83,11 @@ public partial class AxoMotorService : BackgroundService
         await mqttClient.ConnectAsync(mqttClientOptions, stoppingToken);
         await mqttClient.SubscribeAsync(mqttSubscribeOptions, stoppingToken);
 
+        if (_axomotorSettings.KpiUpdateInterval == 0)
+        {
+            _axomotorSettings.KpiUpdateInterval = 10;
+        }
+
         TimeSpan interval = TimeSpan.FromSeconds(_axomotorSettings.KpiUpdateInterval);
 
         while (!stoppingToken.IsCancellationRequested)
