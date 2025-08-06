@@ -40,7 +40,7 @@ public partial class AxoMotorService : BackgroundService
                 new JsonStringEnumConverter<DeviceEventCode>(
                     JsonNamingPolicy.CamelCase
                 ),
-                new JsonStringEnumConverter<KPILevel>(
+                new JsonStringEnumConverter<KPIStatus>(
                     JsonNamingPolicy.CamelCase
                 )
             }

@@ -132,36 +132,36 @@ public class KpiService
             OperativeVehiclesPercentage = new()
             {
                 Value = operativeVehiclesPercentage,
-                Level = GetKPILevel("OperativeVehiclesPercentage", operativeVehiclesPercentage)
+                Status = GetKPIStatus("OperativeVehiclesPercentage", operativeVehiclesPercentage)
             },
             OnTimeTripsCompletedPercentage = new()
             {
                 Value = onTimeTripsFinishedPercentage,
-                Level = GetKPILevel("OnTimeTripsCompletedPercentage", onTimeTripsFinishedPercentage)
+                Status = GetKPIStatus("OnTimeTripsCompletedPercentage", onTimeTripsFinishedPercentage)
             },
             AverageTimeToResolveIncident = new()
             {
                 Value = averageTimeToResolveIncident,
-                Level = GetKPILevel("AverageTimeToResolveIncident", averageTimeToResolveIncident)
+                Status = GetKPIStatus("AverageTimeToResolveIncident", averageTimeToResolveIncident)
             },
             PanicButtonActivations = new()
             {
                 Value = panicBtnActivationsCount,
-                Level = GetKPILevel("PanicButtonActivations", panicBtnActivationsCount)
+                Status = GetKPIStatus("PanicButtonActivations", panicBtnActivationsCount)
             },
             IncidentsReported = new()
             {
                 Value = incidentReportedCount,
-                Level = GetKPILevel("IncidentsReported", incidentReportedCount)
+                Status = GetKPIStatus("IncidentsReported", incidentReportedCount)
             },
             HarshDrivingEvents = new()
             {
                 Value = harshDrivingCount,
-                Level = GetKPILevel("HarshDrivingEvents", harshDrivingCount)
+                Status = GetKPIStatus("HarshDrivingEvents", harshDrivingCount)
             }
         };
 
-        KPILevel GetKPILevel(string name, double value)
+        KPIStatus GetKPIStatus(string name, double value)
         {
             KPI kpi = kpiCatalog.Single(x => x.Code == name);
 
@@ -172,32 +172,32 @@ public class KpiService
                 if (kpi.Inverted)
                 {
                     if (value <= kpi.OptimalValue && value > kpi.GoodValue)
-                        return KPILevel.Optimal;
+                        return KPIStatus.Optimal;
                     else if (value <= kpi.GoodValue && value > kpi.AcceptableValue)
-                        return KPILevel.Good;
+                        return KPIStatus.Good;
                     else if (value <= kpi.AcceptableValue && value > kpi.BadValue)
-                        return KPILevel.Acceptable;
+                        return KPIStatus.Acceptable;
                     else if (value <= kpi.BadValue && value > kpi.CriticalValue)
-                        return KPILevel.Bad;
+                        return KPIStatus.Bad;
                     else if (value <= kpi.CriticalValue)
-                        return KPILevel.Critical;
+                        return KPIStatus.Critical;
                     else
-                        return KPILevel.NotData;
+                        return KPIStatus.NotData;
                 }
                 else
                 {
                     if (value >= kpi.OptimalValue && value < kpi.GoodValue)
-                        return KPILevel.Optimal;
+                        return KPIStatus.Optimal;
                     else if (value >= kpi.GoodValue && value < kpi.AcceptableValue)
-                        return KPILevel.Good;
+                        return KPIStatus.Good;
                     else if (value >= kpi.AcceptableValue && value < kpi.BadValue)
-                        return KPILevel.Acceptable;
+                        return KPIStatus.Acceptable;
                     else if (value >= kpi.BadValue && value < kpi.CriticalValue)
-                        return KPILevel.Bad;
+                        return KPIStatus.Bad;
                     else if (value >= kpi.CriticalValue)
-                        return KPILevel.Critical;
+                        return KPIStatus.Critical;
                     else
-                        return KPILevel.NotData;
+                        return KPIStatus.NotData;
                 }
             }
             else
@@ -205,24 +205,24 @@ public class KpiService
                 if (kpi.Inverted)
                 {
                     if (value <= kpi.OptimalValue && value > kpi.AcceptableValue)
-                        return KPILevel.Optimal;
+                        return KPIStatus.Optimal;
                     else if (value <= kpi.AcceptableValue && value > kpi.CriticalValue)
-                        return KPILevel.Acceptable;
+                        return KPIStatus.Acceptable;
                     else if (value <= kpi.CriticalValue)
-                        return KPILevel.Critical;
+                        return KPIStatus.Critical;
                     else
-                        return KPILevel.NotData;
+                        return KPIStatus.NotData;
                 }
                 else
                 {
                     if (value >= kpi.OptimalValue && value < kpi.AcceptableValue)
-                        return KPILevel.Optimal;
+                        return KPIStatus.Optimal;
                     else if (value >= kpi.AcceptableValue && value < kpi.CriticalValue)
-                        return KPILevel.Acceptable;
+                        return KPIStatus.Acceptable;
                     else if (value >= kpi.CriticalValue)
-                        return KPILevel.Critical;
+                        return KPIStatus.Critical;
                     else
-                        return KPILevel.NotData;
+                        return KPIStatus.NotData;
                 }
             }
         }

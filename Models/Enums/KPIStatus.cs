@@ -1,6 +1,6 @@
 namespace AxoMotor.ApiServer.Models.Enums;
 
-public enum KPILevel
+public enum KPIStatus
 {
     NotData,
     Optimal,
