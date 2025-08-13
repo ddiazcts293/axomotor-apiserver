@@ -49,7 +49,7 @@ ConfigureMySQL(builder.Services, builder.Configuration.GetSection("MySQL"));
 // Agrega el servicio de AxoMotor
 ConfigureAxoMotorService(builder.Services, builder.Configuration.GetSection("MQTT"));
 // Agrega el servicio de Supabase
-await ConfigureSupabaseAsync(builder.Services, builder.Configuration.GetSection("Supabase"));
+//await ConfigureSupabaseAsync(builder.Services, builder.Configuration.GetSection("Supabase"));
 
 builder.Services.AddSingleton<TripService>();
 builder.Services.AddSingleton<IncidentService>();

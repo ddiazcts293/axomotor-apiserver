@@ -19,7 +19,8 @@ namespace AxoMotor.ApiServer.Controllers;
 [ProducesResponseType<BasicResponse>(200)]
 [ProducesResponseType<ErrorResponse>(400)]
 [ProducesResponseType<ErrorResponse>(500)]
-public class UserAccountsController(AxoMotorContext context, Supabase.Client client) : ApiControllerBase
+//public class UserAccountsController(AxoMotorContext context, Supabase.Client client) : ApiControllerBase
+public class UserAccountsController(AxoMotorContext context) : ApiControllerBase
 {
     /*
         TODO: agregar autenticación
@@ -29,7 +30,7 @@ public class UserAccountsController(AxoMotorContext context, Supabase.Client cli
     */
 
     private readonly AxoMotorContext _context = context;
-    private readonly Supabase.Client _client = client;
+    //private readonly Supabase.Client _client = client;
 
     [Authorize]
     [HttpGet("me")]
@@ -82,7 +83,7 @@ public class UserAccountsController(AxoMotorContext context, Supabase.Client cli
                 string phone = request.PhoneNumber;
                 string phoneLastDigits = phone.Substring(phone.Length - 4);
                 string password = $"{request.Role}_{phoneLastDigits}";
-                await _client.Auth.SignUp(request.Email, password);
+                //await _client.Auth.SignUp(request.Email, password);
             }
             catch (GotrueException ex)
             {
@@ -231,14 +232,14 @@ public class UserAccountsController(AxoMotorContext context, Supabase.Client cli
                 return ApiError(ApiResultCode.NotFound);
 
             string email = userAccount.Email;
-            if (await _client.Auth.ResetPasswordForEmail(email))
+            return ApiSuccess();
+            /* if (await _client.Auth.ResetPasswordForEmail(email))
             {
-                return ApiSuccess();
             }
             else
             {
                 return ApiError(ApiResultCode.Failed, "Auth provider error");
-            }
+            } */
         }
         catch (Exception ex)
         {

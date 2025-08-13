@@ -14,15 +14,15 @@
     "ServerVersion": "SQL_VERSION"
   },
     "MQTT": {
-    "Enable": false,
-    "Host": null,
-    "Port": null,
+    "Enable": true,
+    "Host": "axolutions.site,
+    "Port": 1883,
     "User": null,
     "Password": null,
     "ClientId": null
   },
   "AxoMotor": {
-    "KpiUpdateInterval": 10
+    "KpiUpdateInterval": 15
   },
   "Supabase": {
     "Url": "",
